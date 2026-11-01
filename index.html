@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AMR Dijital İkiz GCS</title>
+<style>
+:root{
+  --bg:#000;--p0:#030605;--p1:#060b09;--ln:#0f2218;--ln2:#1a3b2a;
+  --fg:#a8e6b8;--dim:#5c7d68;--g:#39ff7a;--g2:#1c8a45;--am:#ffb000;--cy:#00e5ff;--rd:#ff3355;--mg:#ff4fd8;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);color:var(--fg);font:11.5px/1.35 var(--mono);overflow:hidden}
+#app{display:grid;grid-template-columns:268px minmax(0,1fr) 318px;grid-template-rows:40px minmax(0,1fr);height:100vh}
+header{grid-column:1/-1;display:flex;align-items:center;gap:18px;padding:0 12px;border-bottom:1px solid var(--ln2);background:#010302;white-space:nowrap}
+.brand{color:var(--g);font-weight:700;letter-spacing:.12em}
+.brand small{color:var(--dim);font-weight:400;letter-spacing:.04em;margin-left:8px}
+.hi{color:var(--dim)}.hi b{color:var(--fg);font-weight:600;margin-left:6px;font-variant-numeric:tabular-nums}
+.spacer{flex:1}
+button,select,input[type=number]{font:inherit;color:var(--fg);background:var(--p1);border:1px solid var(--ln2);border-radius:2px;padding:4px 7px}
+button{cursor:pointer}button:hover{border-color:var(--g2);color:var(--g)}
+button.on{background:#0b2a17;border-color:var(--g);color:var(--g)}
+select{width:100%}
+.estop{background:#2a0008;border:1px solid var(--rd);color:#ffd0d8;font-weight:700;letter-spacing:.08em;padding:6px 14px}
+.estop.active{background:var(--rd);color:#000;animation:blink .6s steps(2) infinite}
+@keyframes blink{50%{opacity:.55}}
+aside{background:var(--p0);overflow-y:auto;overflow-x:hidden;min-height:0}
+#left{border-right:1px solid var(--ln2)}
+#right{border-left:1px solid var(--ln2);display:flex;flex-direction:column}
+.sec{border-bottom:1px solid var(--ln);padding:8px 10px}
+.sec h3{margin:0 0 6px;font-size:10px;letter-spacing:.16em;color:var(--am);font-weight:600;display:flex;justify-content:space-between}
+.sec h3 span{color:var(--dim);letter-spacing:0;font-weight:400}
+.row{display:grid;grid-template-columns:96px 1fr;gap:6px;align-items:center;margin:4px 0}
+.row label{color:var(--dim)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.slider{margin:5px 0}
+.slider .top{display:flex;justify-content:space-between;color:var(--dim)}
+.slider .top b{color:var(--cy);font-weight:500}
+input[type=range]{width:100%;accent-color:var(--g);height:14px;margin:2px 0}
+.chk{display:flex;align-items:center;gap:5px;color:var(--dim);cursor:pointer;user-select:none}
+.chk input{accent-color:var(--g);margin:0}
+main{position:relative;min-width:0;min-height:0;background:#000;overflow:hidden}
+#view{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair;touch-action:none}
+#fsmHud{position:absolute;left:10px;bottom:10px;background:rgba(0,4,2,.84);border:1px solid var(--ln2);padding:5px 6px 4px}
+.hudt{font-size:9.5px;letter-spacing:.16em;color:var(--am);margin-bottom:2px;display:flex;justify-content:space-between;gap:12px}
+.hudt span{color:var(--dim);letter-spacing:.04em}
+#topHud{position:absolute;left:10px;top:8px;color:var(--dim);background:rgba(0,4,2,.75);border:1px solid var(--ln);padding:4px 8px;pointer-events:none}
+#topHud b{color:var(--cy);font-weight:500}
+#cursor{position:absolute;right:10px;top:8px;color:var(--dim);background:rgba(0,4,2,.75);border:1px solid var(--ln);padding:4px 8px;pointer-events:none;font-variant-numeric:tabular-nums}
+table.tm{width:100%;border-collapse:collapse}
+table.tm td{padding:1.5px 0;vertical-align:top}
+table.tm td:first-child{color:var(--dim);white-space:nowrap;padding-right:6px}
+table.tm td.v{text-align:right;color:var(--g);font-variant-numeric:tabular-nums}
+.bar{height:3px;background:#0b1a12;margin:1px 0 3px}.bar i{display:block;height:100%;background:var(--g);width:0}
+.bar i.w{background:var(--am)}.bar i.c{background:var(--rd)}
+#log{flex:1;min-height:110px;overflow-y:auto;padding:0 8px 8px;font-size:10.5px}
+.ll{white-space:pre-wrap;word-break:break-word;border-bottom:1px solid #07120c;padding:1px 0}
+.ll .ts{color:#3f5f4b}.ll .INFO{color:var(--g)}.ll .WARN{color:var(--am)}.ll .CRITICAL{color:var(--rd);font-weight:700}
+.ll .n{color:var(--dim);margin-left:4px}
+canvas.pnl{display:block;width:100%;background:#000;border:1px solid var(--ln)}
+.kbd{color:var(--dim);font-size:10px;line-height:1.55}
+@media (max-width:1150px){#app{grid-template-columns:232px minmax(0,1fr) 272px}.hide-s{display:none}}
+@media (max-width:820px){
+  html,body{overflow:auto}#app{display:block;height:auto}
+  header{flex-wrap:wrap;height:auto;padding:6px;gap:10px}main{height:72vh}aside{border:0!important}
+  #fsmHud{transform:scale(.62);transform-origin:left bottom}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="brand">AMR·DT/GCS<small class="hide-s">dijital ikiz · seyrüsefer yer istasyonu</small></div>
+    <div class="hi">DURUM<b id="hdrState">—</b></div>
+    <div class="hi">T<sub>sim</sub><b id="hdrTime">0.000 s</b></div>
+    <div class="hi hide-s">HEDEF<b id="hdrGoal">—</b></div>
+    <div class="hi">FPS<b id="hdrFps">0</b></div>
+    <div class="spacer"></div>
+    <button id="btnEstop" class="estop" title="Kısayol: E">ACİL DURDURMA</button>
+  </header>
+
+  <aside id="left">
+    <div class="sec"><h3>ARAÇ MODU</h3>
+      <div class="grid2" id="tools">
+        <button data-tool="goal" class="on" title="Tıkla = konum, sürükle = θ_g">Hedef (sürükle→θ)</button>
+        <button data-tool="wall" title="Sürükle: 0.2 m kalınlıkta duvar">Statik Duvar</button>
+        <button data-tool="agent" title="Tıkla: gezgin dinamik engel ekle">Dinamik Hedef</button>
+        <button data-tool="erase" title="Sürükle: duvar/engel/log-odds sil">Silgi</button>
+      </div>
+      <div class="kbd" style="margin-top:6px">Sol tık: araç · Sağ/orta sürükle: kaydır · Tekerlek: yakınlaştır</div>
+    </div>
+    <div class="sec"><h3>SİMÜLASYON</h3>
+      <div class="grid2">
+        <button id="btnPause">Duraklat</button><button id="btnStep">Adım (50 ms)</button>
+        <button id="btnReset">Sıfırla</button><button id="btnFit">Sığdır</button>
+        <button id="btnClear" style="grid-column:1/-1">Engel katmanını temizle</button>
+      </div>
+      <div class="row"><label>Zaman ölçeği</label>
+        <select id="selSpeed"><option value="0.25">×0.25</option><option value="0.5">×0.5</option><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select></div>
+      <div class="row"><label>Tohum (seed)</label><input type="number" id="inSeed" value="1337" min="0" step="1"></div>
+    </div>
+    <div class="sec"><h3>ARAÇ MODELİ / NAV</h3>
+      <div class="row"><label>Kinematik</label><select id="selKin"><option value="diff">Diferansiyel</option><option value="tricycle">Üçteker/Bisiklet</option></select></div>
+      <div class="row"><label>Küresel plan.</label><select id="selPlanner"><option value="auto" title="Diferansiyel → ızgara A*, üçteker → hibrit A*">Otomatik</option><option value="grid">Izgara A*</option><option value="hybrid">Hibrit A*</option></select></div>
+      <div class="row"><label>Nav. pozu</label><select id="selPose"><option value="truth" title="İdeal lokalizasyon varsayımı">Yer gerçeği</option><option value="odom">Ham odometri</option></select></div>
+    </div>
+    <div class="sec"><h3>PARAMETRELER</h3><div id="sliders"></div></div>
+    <div class="sec"><h3>KATMANLAR</h3><div class="grid2" id="layers"></div></div>
+    <div class="sec kbd">[Boşluk] duraklat · [.] adım · [E] acil durdurma · [1–4] araç · [F] sığdır</div>
+  </aside>
+
+  <main id="viewWrap">
+    <canvas id="view"></canvas>
+    <div id="topHud">ARAÇ <b id="hudTool">HEDEF</b> · KONTROL <b id="hudCtrl">—</b> · KİNEMATİK <b id="hudKin">DIFF</b> · POZ <b id="hudPose">GT</b></div>
+    <div id="cursor">x —  y —  maliyet —</div>
+    <div id="fsmHud"><div class="hudt">GÖREV FSM<span id="fsmInfo">—</span></div><canvas id="fsm"></canvas></div>
+  </main>
+
+  <aside id="right">
+    <div class="sec"><h3>KİNEMATİK TELEMETRİ</h3><table class="tm" id="tmKin"></table></div>
+    <div class="sec"><h3>HESAPLAMA BÜTÇESİ<span>bütçe 16.7 ms</span></h3><table class="tm" id="tmLat"></table></div>
+    <div class="sec"><h3>LIDAR RADAR<span id="radarInfo">—</span></h3><canvas id="radar" class="pnl"></canvas></div>
+    <div class="sec"><h3>HIZ GEÇMİŞİ<span><span style="color:var(--g)">v</span> · <span style="color:var(--cy)">ω</span> · 15 s</span></h3><canvas id="spark" class="pnl"></canvas></div>
+    <div class="sec" style="padding-bottom:4px;border-bottom:0"><h3>TANI GÜNLÜĞÜ<span id="logCounts">—</span></h3></div>
+    <div id="log"></div>
+  </aside>
+</div>
+<noscript>Bu uygulama JavaScript gerektirir.</noscript>
+
+<script>
+'use strict';
+/* =============================================================================================
+ * AMR DİJİTAL İKİZ & SEYRÜSEFER YER KONTROL İSTASYONU (GCS)
+ * Tek dosya · Vanilla JS (ES2017+) · Canvas 2D · harici bağımlılık yok
+ *
+ * BİRİMLER  : uzunluk [m], açı [rad], zaman [s], hız [m/s], açısal hız [rad/s], ivme [m/s²]
+ * ÇERÇEVELER: map (x sağ, y yukarı, θ x ekseninden saat yönü tersine), base_link (x ileri, y sol)
+ *
+ * MİMARİ (ROS 2 Nav2 karşılıkları parantez içinde)
+ *   World            yer gerçeği: duvar ızgarası + gezgin dinamik engeller (Gazebo dünyası)
+ *   AMRModel         kinematik/dinamik + enkoder odometrisi (diff_drive / tricycle controller + odom)
+ *   Lidar            2B düzlemsel tarayıcı, DDA ışın izleme (sensor_msgs/LaserScan)
+ *   CostmapEngine    statik + engel (log-odds) + şişirme katmanları (nav2_costmap_2d)
+ *   GlobalPlanner    8-bağlantılı ızgara A* / Hibrit A* + Dubins (NavFn / Smac Hybrid-A*)
+ *   LocalPlanner     DWA + potansiyel alan geri çekilmesi (DWB controller)
+ *   Navigator        görev sonlu durum makinesi (bt_navigator + recoveries)
+ *
+ * ZAMANLAMA (sabit adımlı, deterministik)
+ *   Fizik / kinematik / odometri ... 200 Hz (Δt = 5 ms)
+ *   LIDAR + maliyet haritası ......... 15 Hz
+ *   Kontrolcü (FSM + DWA) ............ 20 Hz  (Nav2 controller_frequency varsayılanı)
+ *   Küresel yeniden planlama ......... 1 Hz ızgara A*, 1/3 Hz hibrit A*, yol tıkanınca anında;
+ *                                      asenkron, kontrol döngüsü başına sabit iterasyonlu dilimler (bkz. GlobalPlanner.begin)
+ *   Tüm stokastik süreçler tohumlu PRNG akışlarından (mulberry32 + Box–Muller) beslenir. Aynı tohum ve
+ *   aynı simülasyon zamanında verilen aynı girdiler aynı sonucu üretir. performance.now() yalnızca
+ *   gecikme ölçümü için kullanılır, davranışı etkilemez. (Operatör girdileri gerçek zamanlı kare
+ *   sınırlarında uygulanır; bu nedenle elle verilen girdiler bit-düzeyinde tekrarlanabilir değildir.)
+ *
+ * MATEMATİKSEL TEMELLER
+ * (1) Tekteker kinematiği:  [ẋ ẏ θ̇]ᵀ = [[cosθ,0],[sinθ,0],[0,1]]·[v ω]ᵀ
+ *     Diferansiyel ters kinematik: v_R = v + ω·L/2 ,  v_L = v − ω·L/2     (L: iz genişliği)
+ *     Tam yay entegrasyonu (ω≠0): x' = x + (v/ω)(sin(θ+ωΔt) − sinθ),  y' = y − (v/ω)(cos(θ+ωΔt) − cosθ)
+ *     Bisiklet/üçteker (arka aks referanslı): θ̇ = v·tanδ / L_wb , ön teker hızı v_f = v / cosδ
+ * (2) DWA:  G(v,ω) = α·heading(v,ω) + β·dist(v,ω) + γ·velocity(v,ω)  [+ δ·progress(v,ω), bkz. LocalPlanner]
+ *     V_s = {v∈[0,v_max], ω∈[−ω_max,ω_max]}
+ *     V_d = {v∈[v_c − a_fren·Δt, v_c + a_max·Δt], ω∈[ω_c − α_max·Δt, ω_c + α_max·Δt]}  (Δt = 1/f_kontrol)
+ *     V_a = {(v,ω) | v²/(2·a_fren) + d_güvenlik < d_çarpışma(v,ω)}
+ *     V_r = V_s ∩ V_d ∩ V_a
+ * (3) Log-odds doluluk:  L(m_i|z_1:t) = L(m_i|z_1:t−1) + log(P(m_i|z_t)/(1−P(m_i|z_t))) − L₀ ,  L₀ = logit(0.5) = 0
+ *     Şişirme (Nav2 inflation_layer):  maliyet(d) = 252 · exp(−ζ·(d − r_içsel))  r_içsel < d ≤ r_şişirme
+ *     d = 0 → 254 (ÖLÜMCÜL), d ≤ r_içsel → 253 (İÇSEL), d > r_şişirme → 0.  Formüldeki "Maliyet_ölümcül"
+ *     katsayısı Nav2'deki gibi INSCRIBED−1 = 252 olarak uygulanmıştır (253/254 ayrık sınıflardır).
+ *     Ters dönüşüm (DWA açıklık terimi): d − r_içsel = −ln(c/252)/ζ
+ * ============================================================================================= */
+
+/* ------------------------------- 0. SABİTLER & YARDIMCILAR -------------------------------- */
+const TAU = Math.PI * 2, SQ2 = Math.SQRT2, DEG = 180 / Math.PI;
+const clamp = (x, a, b) => (x < a ? a : x > b ? b : x);
+function wrap(a) { a = (a + Math.PI) % TAU; if (a < 0) a += TAU; return a - Math.PI; }   // (−π, π]
+function mod2pi(a) { a %= TAU; return a < 0 ? a + TAU : a; }                              // [0, 2π)
+const logit = p => Math.log(p / (1 - p));
+const nowMs = () => (typeof performance !== 'undefined' ? performance.now() : Date.now());
+const ema = (o, v, k) => o + (v - o) * k;
+
+/** mulberry32: 32-bit durumlu hızlı PRNG (periyot 2^32). */
+function mulberry32(seed) {
+  let s = seed >>> 0;
+  return function () {
+    s = (s + 0x6D2B79F5) >>> 0; let t = s;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+/** Tohumlu rastgele akış: U(0,1) ve Box–Muller ile N(0,σ²). */
+class RNG {
+  constructor(seed) { this.u = mulberry32(seed); this.spare = null; }
+  uniform() { return this.u(); }
+  range(a, b) { return a + (b - a) * this.u(); }
+  gauss(sigma) {
+    if (this.spare !== null) { const s = this.spare; this.spare = null; return s * sigma; }
+    let u = 0; while (u <= 1e-12) u = this.u();
+    const v = this.u(), r = Math.sqrt(-2 * Math.log(u));
+    this.spare = r * Math.sin(TAU * v);
+    return r * Math.cos(TAU * v) * sigma;
+  }
+}
+
+/* Çalışma zamanı yapılandırması (arayüz sürgüleri doğrudan bu nesneyi değiştirir) */
+const CFG = {
+  seed: 1337,
+  kind: 'diff',                 // 'diff' | 'tricycle'
+  poseSource: 'truth',          // 'truth' (ideal lokalizasyon) | 'odom' (ham odometri ile seyrüsefer)
+  world: { w: 26, h: 16, res: 0.10 },
+  phys: { dt: 0.005 },
+  robot: {
+    radius: 0.32,               // dairesel ayak izi yarıçapı = r_içsel [m]
+    track: 0.46,                // diferansiyel iz genişliği L [m]
+    vMax: 0.8, wMax: 1.6,       // [m/s], [rad/s]
+    aMax: 0.8, aBrake: 1.6,     // hızlanma / frenleme yavaşlaması [m/s²]
+    alphaMax: 3.0,              // açısal ivme sınırı [rad/s²]
+    aEstop: 4.0,                // acil durdurma yavaşlaması [m/s²]
+    wheelVMax: 1.5,             // teker çizgisel hız doyumu [m/s]
+    wheelbase: 0.26,            // üçteker dingil mesafesi L_wb [m]
+    steerMax: 0.55,             // δ_max [rad]  → ρ_min = L_wb / tan δ_max ≈ 0.42 m
+    steerRate: 1.8,             // δ̇_max [rad/s]
+    encNoise: 0.005,            // σ_enk [m/√m]: Δs_ölç = Δs + N(0, σ²·|Δs|)
+    steerNoise: 0.004,          // direksiyon enkoderi σ [rad]
+  },
+  lidar: { beams: 360, rMin: 0.12, rMax: 10, sigma: 0.012, dropout: 0.02, hz: 15 },
+  costmap: { inflR: 0.75, zeta: 4.0, pOcc: 0.70, pFree: 0.40, lMin: -2.0, lMax: 3.5, lThr: 1.2 },
+  planner: { mode: 'auto', costW: 8.0, hybridMaxIter: 8000 },
+  dwa: { hz: 20, horizon: 2.0, dt: 0.1, nv: 9, nw: 19, alpha: 1.0, beta: 0.6, gamma: 0.4, delta: 0.8 },
+  goal: { xyTol: 0.15, yawTol: 0.06, xyTolAck: 0.25 },
+};
+
+/* ------------------------------- 1. İKİLİ MİNİMUM YIĞIN ----------------------------------- */
+/** Tip-dizili ikili yığın; tembel silme (lazy deletion) ile A* ve Dijkstra açık kümesi. push/pop O(log n). */
+class MinHeap {
+  constructor(cap) { this.k = new Float64Array(cap); this.v = new Int32Array(cap); this.n = 0; }
+  clear() { this.n = 0; }
+  push(key, val) {
+    if (this.n >= this.k.length) {
+      const k2 = new Float64Array(this.k.length * 2); k2.set(this.k); this.k = k2;
+      const v2 = new Int32Array(this.v.length * 2); v2.set(this.v); this.v = v2;
+    }
+    const K = this.k, V = this.v; let i = this.n++;
+    while (i > 0) { const p = (i - 1) >> 1; if (K[p] <= key) break; K[i] = K[p]; V[i] = V[p]; i = p; }
+    K[i] = key; V[i] = val;
+  }
+  pop() {
+    const K = this.k, V = this.v, top = V[0], n = --this.n;
+    if (n > 0) {
+      const key = K[n], val = V[n]; let i = 0;
+      for (;;) {
+        let l = 2 * i + 1; if (l >= n) break;
+        const r = l + 1; if (r < n && K[r] < K[l]) l = r;
+        if (K[l] >= key) break;
+        K[i] = K[l]; V[i] = V[l]; i = l;
+      }
+      K[i] = key; V[i] = val;
+    }
+    return top;
+  }
+}
+
+/* ------------------------------- 2. DÜNYA (YER GERÇEĞİ) ----------------------------------- */
+class DynamicAgent {
+  /** Gezgin dinamik engel: sabit hızlı rastgele yürüyüş, duvar/robot/ajan çarpışmasından kaçınır. */
+  constructor(x, y, rng) {
+    this.x = x; this.y = y; this.r = 0.25; this.rng = rng;
+    this.speed = rng.range(0.3, 0.6); this.th = rng.range(-Math.PI, Math.PI);
+    this.tTurn = rng.range(1, 3); this.vx = 0; this.vy = 0;
+  }
+  update(dt, world, robot) {
+    this.tTurn -= dt;
+    if (this.tTurn <= 0) { this.th = wrap(this.th + this.rng.gauss(0.9)); this.tTurn = this.rng.range(1.5, 4.5); }
+    const rx = robot.x - this.x, ry = robot.y - this.y, d = Math.hypot(rx, ry);
+    if (d < this.r + robot.radius + 0.6) {                      // robota doğru yürüyorsa geri dön
+      const toR = Math.atan2(ry, rx);
+      if (Math.abs(wrap(toR - this.th)) < Math.PI / 2) this.th = wrap(toR + Math.PI + this.rng.gauss(0.4));
+    }
+    const nx = this.x + Math.cos(this.th) * this.speed * dt, ny = this.y + Math.sin(this.th) * this.speed * dt;
+    let blocked = world.penetration(nx, ny, this.r + 0.03, false) > 0 ||
+                  Math.hypot(robot.x - nx, robot.y - ny) < this.r + robot.radius + 0.05;
+    if (!blocked) for (const o of world.agents) {
+      if (o === this) continue;
+      const dn = Math.hypot(o.x - nx, o.y - ny);
+      if (dn < this.r + o.r + 0.05 && dn < Math.hypot(o.x - this.x, o.y - this.y)) { blocked = true; break; }
+    }
+    if (blocked) { this.th = wrap(this.th + Math.PI + this.rng.gauss(0.6)); this.vx = this.vy = 0; this.tTurn = this.rng.range(1, 3); return; }
+    this.vx = (nx - this.x) / dt; this.vy = (ny - this.y) / dt; this.x = nx; this.y = ny;
+  }
+}
+
+class World {
+  constructor(seed) {
+    const c = CFG.world;
+    this.res = c.res; this.inv = 1 / c.res; this.Wm = c.w; this.Hm = c.h;
+    this.W = Math.round(c.w / c.res); this.H = Math.round(c.h / c.res); this.N = this.W * this.H;
+    this.occ = new Uint8Array(this.N);    // 1 = duvar (yer gerçeği)
+    this.fixed = new Uint8Array(this.N);  // 1 = silinemez dış sınır
+    this.agents = []; this.rng = new RNG(seed); this.version = 0;
+  }
+  rect(x0, y0, x1, y1, fixed) {
+    const r = this.res;
+    const i0 = Math.max(0, Math.round(x0 / r)), i1 = Math.min(this.W, Math.round(x1 / r));
+    const j0 = Math.max(0, Math.round(y0 / r)), j1 = Math.min(this.H, Math.round(y1 / r));
+    for (let j = j0; j < j1; j++) for (let i = i0; i < i1; i++) { const k = j * this.W + i; this.occ[k] = 1; if (fixed) this.fixed[k] = 1; }
+    this.version++;
+  }
+  /** Varsayılan depo düzeni: 3 bölme, 2.0 m kapı açıklıkları, raf blokları. */
+  buildDefault() {
+    const T = 0.2, Wm = this.Wm, Hm = this.Hm;
+    this.rect(0, 0, Wm, T, true); this.rect(0, Hm - T, Wm, Hm, true); this.rect(0, 0, T, Hm, true); this.rect(Wm - T, 0, Wm, Hm, true);
+    this.rect(9, 0, 9.2, 5.5); this.rect(9, 7.5, 9.2, Hm);
+    this.rect(17, 0, 17.2, 9.5); this.rect(17, 11.5, 17.2, Hm);
+    this.rect(11, 3, 15, 3.6); this.rect(11, 11, 15, 11.6); this.rect(12.2, 6.8, 13.8, 8.4);
+    this.rect(19.5, 2, 20.1, 7); this.rect(22.5, 2, 23.1, 7); this.rect(20, 11.5, 23, 13);
+    this.rect(3, 10, 3.6, 10.6); this.rect(5.5, 5, 6.1, 5.6); this.rect(2, 13, 4.5, 14);
+    this.addAgent(13, 5.2); this.addAgent(21.3, 9.5); this.addAgent(4.5, 8);
+  }
+  addAgent(x, y) { const a = new DynamicAgent(x, y, this.rng); this.agents.push(a); return a; }
+  /** Kalın doğru parçası boyar (statik duvar aracı). Robot ayak izine boyama yapılmaz. */
+  paintSegment(ax, ay, bx, by, thick, robot) {
+    const r = this.res, h = thick / 2, pad = h + r;
+    const i0 = Math.max(1, Math.floor((Math.min(ax, bx) - pad) / r)), i1 = Math.min(this.W - 2, Math.ceil((Math.max(ax, bx) + pad) / r));
+    const j0 = Math.max(1, Math.floor((Math.min(ay, by) - pad) / r)), j1 = Math.min(this.H - 2, Math.ceil((Math.max(ay, by) + pad) / r));
+    const vx = bx - ax, vy = by - ay, L2 = vx * vx + vy * vy; let n = 0;
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const cx = (i + 0.5) * r, cy = (j + 0.5) * r;
+      const t = L2 > 0 ? clamp(((cx - ax) * vx + (cy - ay) * vy) / L2, 0, 1) : 0;
+      const dx = cx - (ax + t * vx), dy = cy - (ay + t * vy);
+      if (dx * dx + dy * dy > h * h) continue;
+      if (robot && Math.hypot(cx - robot.x, cy - robot.y) < robot.radius + 0.12) continue;
+      const k = j * this.W + i; if (!this.occ[k]) { this.occ[k] = 1; n++; }
+    }
+    this.version++; return n;
+  }
+  eraseDisk(x, y, rad) {
+    const r = this.res, R2 = rad * rad;
+    const i0 = Math.max(0, Math.floor((x - rad) / r)), i1 = Math.min(this.W - 1, Math.floor((x + rad) / r));
+    const j0 = Math.max(0, Math.floor((y - rad) / r)), j1 = Math.min(this.H - 1, Math.floor((y + rad) / r));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const dx = (i + 0.5) * r - x, dy = (j + 0.5) * r - y, k = j * this.W + i;
+      if (dx * dx + dy * dy <= R2 && !this.fixed[k]) this.occ[k] = 0;
+    }
+    const before = this.agents.length;
+    this.agents = this.agents.filter(a => Math.hypot(a.x - x, a.y - y) > rad + a.r * 0.5);
+    this.version++; return before - this.agents.length;
+  }
+  /** Daire–dünya penetrasyon derinliği [m] (0 = temas yok). Hücre kare yaklaşımı, O(r²/res²). */
+  penetration(x, y, r, withAgents) {
+    const res = this.res; let pen = 0;
+    const i0 = Math.floor((x - r) / res), i1 = Math.floor((x + r) / res);
+    const j0 = Math.floor((y - r) / res), j1 = Math.floor((y + r) / res);
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      if (i < 0 || j < 0 || i >= this.W || j >= this.H) { pen = Math.max(pen, r); continue; }
+      if (!this.occ[j * this.W + i]) continue;
+      const qx = clamp(x, i * res, (i + 1) * res), qy = clamp(y, j * res, (j + 1) * res);
+      const d = Math.hypot(x - qx, y - qy); if (d < r) pen = Math.max(pen, r - d);
+    }
+    if (withAgents) for (const a of this.agents) { const d = Math.hypot(a.x - x, a.y - y) - (r + a.r); if (d < 0) pen = Math.max(pen, -d); }
+    return pen;
+  }
+  /**
+   * Işın izleme: Amanatides–Woo ızgara DDA (hücre başına O(1), ışın başına O(r/res)) +
+   * dinamik engeller için analitik ışın–daire kesişimi:  t = b − √(b² − c),  b = f·d̂,  c = |f|² − r².
+   * @returns isabet mesafesi [m] veya menzil içinde isabet yoksa Infinity
+   */
+  raycast(ox, oy, ang, rMax, ag) {
+    const res = this.res, W = this.W, H = this.H, occ = this.occ;
+    const dx = Math.cos(ang), dy = Math.sin(ang);
+    let i = Math.floor(ox / res), j = Math.floor(oy / res);
+    const si = dx > 0 ? 1 : -1, sj = dy > 0 ? 1 : -1;
+    const tDx = dx !== 0 ? Math.abs(res / dx) : Infinity, tDy = dy !== 0 ? Math.abs(res / dy) : Infinity;
+    let tMx = dx > 0 ? ((i + 1) * res - ox) / dx : dx < 0 ? (i * res - ox) / dx : Infinity;
+    let tMy = dy > 0 ? ((j + 1) * res - oy) / dy : dy < 0 ? (j * res - oy) / dy : Infinity;
+    let t = 0, hit = Infinity;
+    while (t <= rMax) {
+      if (i < 0 || j < 0 || i >= W || j >= H) { hit = t; break; }
+      if (occ[j * W + i]) { hit = t; break; }
+      if (tMx < tMy) { t = tMx; tMx += tDx; i += si; } else { t = tMy; tMy += tDy; j += sj; }
+    }
+    for (let k = 0; k < ag.length; k++) {
+      const a = ag[k], fx = a.x - ox, fy = a.y - oy, b = fx * dx + fy * dy;
+      if (b < 0) continue;
+      const disc = b * b - (fx * fx + fy * fy - a.r * a.r);
+      if (disc < 0) continue;
+      const tt = b - Math.sqrt(disc); if (tt >= 0 && tt < hit) hit = tt;
+    }
+    return hit <= rMax ? hit : Infinity;
+  }
+  updateAgents(dt, robot) { for (const a of this.agents) a.update(dt, this, robot); }
+}
+
+/* ------------------------------- 3. KİNEMATİK / DİNAMİK / ODOMETRİ ------------------------ */
+class AMRModel {
+  constructor(kind, rng) { this.kind = kind; this.rng = rng; this.reset(0, 0, 0); }
+  reset(x, y, th) {
+    Object.assign(this, { x, y, th, v: 0, w: 0, delta: 0, acc: 0, wR: 0, wL: 0, vFront: 0,
+      cmdV: 0, cmdW: 0, estop: false, collided: false, odoV: 0, odoW: 0, dist: 0 });
+    this.odo = { x, y, th };
+  }
+  get radius() { return CFG.robot.radius; }
+  setKind(k) { this.kind = k; this.delta = 0; this.w = 0; }
+  setCommand(v, w) { const R = CFG.robot; this.cmdV = clamp(v, -0.3, R.vMax); this.cmdW = clamp(w, -R.wMax, R.wMax); }
+  resetOdometry() { this.odo = { x: this.x, y: this.y, th: this.th }; }
+
+  /** Bir fizik adımı (Δt). Sıra: hız rampası (dinamik sınırlar) → ters kinematik → yay entegrasyonu → temas → odometri. */
+  step(dt, world) {
+    const R = CFG.robot, v0 = this.v;
+    let tv = this.cmdV, tw = this.cmdW;
+    if (this.estop) { tv = 0; tw = 0; }
+    // Çizgisel: hızlanırken a_max, yavaşlarken a_fren, E-stop'ta a_acil
+    const speeding = Math.abs(tv) > Math.abs(this.v) && tv * this.v >= 0;
+    const aLim = this.estop ? R.aEstop : (speeding ? R.aMax : R.aBrake);
+    this.v += clamp(tv - this.v, -aLim * dt, aLim * dt);
+
+    if (this.kind === 'diff') {
+      const al = this.estop ? 2 * R.alphaMax : R.alphaMax;
+      this.w += clamp(tw - this.w, -al * dt, al * dt);
+      // [v_R v_L]ᵀ = [[1, L/2],[1, −L/2]]·[v ω]ᵀ ; teker doyumu → (v, ω) orantılı ölçeklenir (eğrilik korunur)
+      let vR = this.v + this.w * R.track / 2, vL = this.v - this.w * R.track / 2;
+      const m = Math.max(Math.abs(vR), Math.abs(vL));
+      if (m > R.wheelVMax) { const k = R.wheelVMax / m; vR *= k; vL *= k; this.v = (vR + vL) / 2; this.w = (vR - vL) / R.track; }
+      this.wR = vR; this.wL = vL;
+    } else {
+      // Bisiklet modeli: istenen δ = atan(ω·L_wb / v); δ̇ ve |δ| sınırlı; θ̇ = v·tanδ/L_wb
+      let dCmd = this.delta;
+      if (Math.abs(tv) > 1e-3) dCmd = Math.atan(tw * R.wheelbase / tv);
+      else if (Math.abs(tw) > 1e-3) dCmd = Math.sign(tw) * R.steerMax;   // durağan: direksiyonu önceden çevir
+      dCmd = clamp(dCmd, -R.steerMax, R.steerMax);
+      this.delta += clamp(dCmd - this.delta, -R.steerRate * dt, R.steerRate * dt);
+      this.w = this.v * Math.tan(this.delta) / R.wheelbase;
+      this.vFront = this.v / Math.cos(this.delta);
+    }
+    this.acc = (this.v - v0) / dt;
+
+    // Tam yay entegrasyonu
+    let nx, ny, nth;
+    if (Math.abs(this.w) < 1e-6) { nx = this.x + this.v * dt * Math.cos(this.th); ny = this.y + this.v * dt * Math.sin(this.th); nth = this.th; }
+    else { const r = this.v / this.w; nth = this.th + this.w * dt; nx = this.x + r * (Math.sin(nth) - Math.sin(this.th)); ny = this.y - r * (Math.cos(nth) - Math.cos(this.th)); }
+
+    // Temas: penetrasyonu artıran hareket reddedilir (sert durma); azaltan hareket serbest
+    const rr = R.radius - 0.02;
+    const p0 = world.penetration(this.x, this.y, rr, true), p1 = world.penetration(nx, ny, rr, true);
+    let moved = true;
+    if (p1 > 1e-4 && p1 >= p0 - 1e-6) { this.v = 0; this.w = 0; this.collided = true; moved = false; }
+    else { this.collided = p1 > 1e-4; this.dist += Math.hypot(nx - this.x, ny - this.y); this.x = nx; this.y = ny; this.th = wrap(nth); }
+    this.odometry(dt, moved);
+  }
+
+  /**
+   * Enkoder odometrisi. Her teker yer değiştirmesi: Δs_ölç = Δs + ε,  ε ~ N(0, σ²·|Δs|)
+   * (varyans kat edilen mesafeyle doğrusal → konum/yön kayması rastgele yürüyüş gibi büyür).
+   * Diff:   Δs = (Δs_R+Δs_L)/2,  Δθ = (Δs_R−Δs_L)/L
+   * Üçteker: Δs = Δs_f·cosδ̂,  Δθ = Δs_f·sinδ̂/L_wb,  δ̂ = δ + N(0, σ_δ²)
+   * Orta nokta entegrasyonu: x += Δs·cos(θ + Δθ/2)
+   */
+  odometry(dt, moved) {
+    const R = CFG.robot, rng = this.rng, s = R.encNoise, o = this.odo;
+    let ds, dth;
+    if (this.kind === 'diff') {
+      const dR = moved ? this.wR * dt : 0, dL = moved ? this.wL * dt : 0;
+      const mR = dR + rng.gauss(s * Math.sqrt(Math.abs(dR))), mL = dL + rng.gauss(s * Math.sqrt(Math.abs(dL)));
+      ds = (mR + mL) / 2; dth = (mR - mL) / R.track;
+    } else {
+      const df = moved ? this.vFront * dt : 0;
+      const mf = df + rng.gauss(s * Math.sqrt(Math.abs(df)));
+      const md = this.delta + (df !== 0 ? rng.gauss(R.steerNoise) : 0);
+      ds = mf * Math.cos(md); dth = mf * Math.sin(md) / R.wheelbase;
+    }
+    o.x += ds * Math.cos(o.th + dth / 2); o.y += ds * Math.sin(o.th + dth / 2); o.th = wrap(o.th + dth);
+    this.odoV = ds / dt; this.odoW = dth / dt;
+  }
+}
+
+/* ------------------------------- 4. LIDAR ------------------------------------------------- */
+class Lidar {
+  constructor(rng) { this.rng = rng; this.alloc(CFG.lidar.beams); this.pose = { x: 0, y: 0, th: 0 }; this.stamp = 0; this.hits = 0; }
+  alloc(n) { this.n = n; this.ranges = new Float32Array(n); this.flag = new Uint8Array(n); this.dA = TAU / n; }
+  /**
+   * 360° tarama. flag: 0 = veri kaybı/geçersiz (temizleme yapılmaz), 1 = isabet, 2 = menzilde dönüş yok.
+   * Ölçüm modeli: r̂ = r + N(0, σ_r²); P(kayıp) = p_drop; r̂ < r_min → geçersiz.
+   * Yalnızca menzil içindeki dinamik engeller ön-filtrelenir (ışın başına O(k), k ≪ ajan sayısı).
+   */
+  scan(world, pose) {
+    const L = CFG.lidar, n = this.n, rng = this.rng;
+    this.pose = { x: pose.x, y: pose.y, th: pose.th };
+    const ag = [];
+    for (const a of world.agents) if (Math.hypot(a.x - pose.x, a.y - pose.y) < L.rMax + a.r) ag.push(a);
+    let hits = 0;
+    for (let k = 0; k < n; k++) {
+      let r = world.raycast(pose.x, pose.y, pose.th + k * this.dA, L.rMax, ag);
+      if (rng.uniform() < L.dropout) { this.flag[k] = 0; this.ranges[k] = 0; continue; }
+      if (r === Infinity) { this.flag[k] = 2; this.ranges[k] = L.rMax; continue; }
+      r += rng.gauss(L.sigma);
+      if (r < L.rMin) { this.flag[k] = 0; this.ranges[k] = 0; continue; }
+      this.flag[k] = 1; this.ranges[k] = Math.min(r, L.rMax); hits++;
+    }
+    this.hits = hits; this.stamp++;
+  }
+}
+
+/* ------------------------------- 5. ÇOK KATMANLI MALİYET HARİTASI ------------------------- */
+class CostmapEngine {
+  constructor(world) {
+    this.world = world; this.res = world.res; this.inv = 1 / world.res;
+    this.W = world.W; this.H = world.H; this.N = world.N;
+    this.stat = new Uint8Array(this.N);        // statik katman (0 / 254)
+    this.logOdds = new Float32Array(this.N);   // engel katmanı log-odds durumu
+    this.obst = new Uint8Array(this.N);        // engel katmanı (0 / 254)
+    this.statInfl = new Uint8Array(this.N);    // statik katmanın önbelleğe alınmış şişirmesi
+    this.master = new Uint8Array(this.N);      // birleşik maliyet (planlayıcıların okuduğu)
+    this.edgeBuf = new Int32Array(this.N);
+    this.version = 0; this.rInsc = CFG.robot.radius; this.nObst = 0;
+    this.buildKernel(); this.syncStatic();
+  }
+  /** Nav2 inflation_layer maliyet fonksiyonu. */
+  costOfDist(d) {
+    if (d <= 1e-9) return 254;
+    if (d <= this.rInsc) return 253;
+    if (d > CFG.costmap.inflR) return 0;
+    return Math.max(1, Math.floor(252 * Math.exp(-CFG.costmap.zeta * (d - this.rInsc))));
+  }
+  /** Maliyetten engel yüzeyine kalan açıklık [m] (ters şişirme fonksiyonu), [0, r_şiş − r_içsel] aralığına kırpılır. */
+  clearanceOf(c) {
+    const span = CFG.costmap.inflR - this.rInsc;
+    if (c >= 253) return 0;
+    if (c === 0) return span;
+    const d = -Math.log(c / 252) / CFG.costmap.zeta;
+    return d < span ? d : span;
+  }
+  /**
+   * Şişirme çekirdeği: (Δi,Δj) ofsetleri ve önceden hesaplanmış maliyetleri. Uygulama yalnızca
+   * "kenar" ölümcül hücrelerden yapılır (en az bir 4-komşusu ölümcül olmayan): serbest bir hücreye
+   * en yakın engel hücresi daima bir kenar hücresidir → iç hücreler atlanır, sonuç değişmez.
+   * Karmaşıklık: O(kenar_hücre · çekirdek) ; tam BFS/mesafe dönüşümüne gerek kalmaz.
+   */
+  buildKernel() {
+    const res = this.res, R = Math.ceil(CFG.costmap.inflR / res), di = [], dj = [], kc = [];
+    for (let j = -R; j <= R; j++) for (let i = -R; i <= R; i++) {
+      const c = this.costOfDist(Math.hypot(i, j) * res);
+      if (c > 0) { di.push(i); dj.push(j); kc.push(c); }
+    }
+    this.kdi = Int16Array.from(di); this.kdj = Int16Array.from(dj); this.kc = Uint8Array.from(kc); this.kn = kc.length;
+  }
+  rebuild() { this.buildKernel(); this.inflateStatic(); }
+  stamp(E, m, out) {
+    const W = this.W, H = this.H, kdi = this.kdi, kdj = this.kdj, kc = this.kc, kn = this.kn;
+    for (let e = 0; e < m; e++) {
+      const idx = E[e], i = idx % W, j = (idx - i) / W;
+      for (let k = 0; k < kn; k++) {
+        const ii = i + kdi[k]; if (ii < 0 || ii >= W) continue;
+        const jj = j + kdj[k]; if (jj < 0 || jj >= H) continue;
+        const id = jj * W + ii, c = kc[k]; if (c > out[id]) out[id] = c;
+      }
+    }
+  }
+  syncStatic() { const occ = this.world.occ, st = this.stat; for (let i = 0; i < this.N; i++) st[i] = occ[i] ? 254 : 0; this.inflateStatic(); }
+  inflateStatic() {
+    const st = this.stat, out = this.statInfl, E = this.edgeBuf, W = this.W, H = this.H; let m = 0;
+    out.fill(0);
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      const id = j * W + i; if (!st[id]) continue;
+      out[id] = 254;
+      if ((i > 0 && !st[id - 1]) || (i < W - 1 && !st[id + 1]) || (j > 0 && !st[id - W]) || (j < H - 1 && !st[id + W])) E[m++] = id;
+    }
+    this.stamp(E, m, out); this.composeMaster();
+  }
+  /**
+   * Engel katmanı güncellemesi (Bresenham ışın temizleme + log-odds işaretleme).
+   *   Işın üzerindeki hücreler: L += logit(p_boş)  (≈ −0.405), [L_min, L_max] ile kırpılır
+   *   Bitiş hücresi (isabet):   L += logit(p_dolu) (≈ +0.847)
+   *   L₀ = logit(0.5) = 0. Hücre ölümcül ⇔ L > L_eşik ve statik katmanda değil.
+   * Işın kökü ve izdüşümü seyrüsefer pozuna göredir (odometri modunda kayma haritaya yansır).
+   */
+  update(lidar, pose) {
+    const W = this.W, H = this.H, inv = this.inv, lo = this.logOdds, C = CFG.costmap;
+    const lF = logit(C.pFree), lO = logit(C.pOcc), lMin = C.lMin, lMax = C.lMax;
+    const x0 = Math.floor(pose.x * inv), y0 = Math.floor(pose.y * inv);
+    if (x0 < 0 || y0 < 0 || x0 >= W || y0 >= H) return;
+    const n = lidar.n, rg = lidar.ranges, fl = lidar.flag, dA = lidar.dA;
+    for (let k = 0; k < n; k++) {
+      const f = fl[k]; if (f === 0) continue;
+      const a = pose.th + k * dA, r = rg[k];
+      const x1 = Math.floor((pose.x + r * Math.cos(a)) * inv), y1 = Math.floor((pose.y + r * Math.sin(a)) * inv);
+      let x = x0, y = y0;
+      const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+      let err = dx + dy;
+      for (;;) {
+        if (x === x1 && y === y1) break;
+        if (x < 0 || y < 0 || x >= W || y >= H) break;
+        const id = y * W + x, v = lo[id] + lF; lo[id] = v < lMin ? lMin : v;
+        const e2 = 2 * err;
+        if (e2 >= dy) { err += dy; x += sx; }
+        if (e2 <= dx) { err += dx; y += sy; }
+      }
+      if (f === 1 && x1 >= 0 && y1 >= 0 && x1 < W && y1 < H) { const id = y1 * W + x1, v = lo[id] + lO; lo[id] = v > lMax ? lMax : v; }
+    }
+    this.composeMaster();
+  }
+  /** master = max(statik_şişirme, engel ∪ engel_şişirme). O(N) + O(kenar·çekirdek). */
+  composeMaster() {
+    const N = this.N, W = this.W, H = this.H, lo = this.logOdds, st = this.stat, ob = this.obst, M = this.master, E = this.edgeBuf;
+    const thr = CFG.costmap.lThr; let nObst = 0;
+    for (let i = 0; i < N; i++) { const o = lo[i] > thr && !st[i]; ob[i] = o ? 254 : 0; if (o) nObst++; }
+    M.set(this.statInfl);
+    let m = 0;
+    if (nObst) for (let j = 1; j < H - 1; j++) for (let i = 1; i < W - 1; i++) {
+      const id = j * W + i; if (!ob[id]) continue;
+      M[id] = 254;
+      if (!(ob[id - 1] || st[id - 1]) || !(ob[id + 1] || st[id + 1]) || !(ob[id - W] || st[id - W]) || !(ob[id + W] || st[id + W])) E[m++] = id;
+    }
+    this.stamp(E, m, M); this.nObst = nObst; this.version++;
+  }
+  clearDisk(x, y, rad) {
+    const res = this.res, R2 = rad * rad;
+    const i0 = Math.max(0, Math.floor((x - rad) / res)), i1 = Math.min(this.W - 1, Math.floor((x + rad) / res));
+    const j0 = Math.max(0, Math.floor((y - rad) / res)), j1 = Math.min(this.H - 1, Math.floor((y + rad) / res));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
+      const dx = (i + 0.5) * res - x, dy = (j + 0.5) * res - y; if (dx * dx + dy * dy <= R2) this.logOdds[j * this.W + i] = 0;
+    }
+    this.composeMaster();
+  }
+  clearAll() { this.logOdds.fill(0); this.composeMaster(); }
+  costAt(x, y) {
+    if (x < 0 || y < 0) return 254;
+    const i = (x * this.inv) | 0, j = (y * this.inv) | 0;
+    if (i >= this.W || j >= this.H) return 254;
+    return this.master[j * this.W + i];
+  }
+}
+
+/* ------------------------------- 6. DUBINS EĞRİLERİ --------------------------------------- */
+/*
+ * Shkel & Lumelsky (2001) normalleştirilmiş çözümü (ρ = 1'e ölçekli). 6 kelime: LSL, LSR, RSL, RSR, RLR, LRL.
+ * d = D/ρ, α = θ₀ − φ, β = θ₁ − φ, φ = atan2(Δy, Δx). Segment uzunlukları (t, p, q) radyan / birim yay.
+ * Hibrit A* hem sezgisel (engelsiz holonomik olmayan alt sınır) hem analitik genişletme için kullanır.
+ */
+const DUBINS_TYPES = [[0, 1, 0], [0, 1, 2], [2, 1, 0], [2, 1, 2], [2, 0, 2], [0, 2, 0]]; // 0=L 1=S 2=R
+function dubins(x0, y0, t0, x1, y1, t1, rho, wantPath) {
+  const dx = x1 - x0, dy = y1 - y0, D = Math.hypot(dx, dy), d = D / rho;
+  const ph = D > 1e-9 ? mod2pi(Math.atan2(dy, dx)) : 0;
+  const a = mod2pi(t0 - ph), b = mod2pi(t1 - ph);
+  const sa = Math.sin(a), sb = Math.sin(b), ca = Math.cos(a), cb = Math.cos(b), cab = Math.cos(a - b), d2 = d * d;
+  let best = Infinity, bw = -1, s0 = 0, s1 = 0, s2 = 0, p2, p, t, q, tmp, phi;
+  const take = (w) => { const L = t + p + q; if (L < best) { best = L; bw = w; s0 = t; s1 = p; s2 = q; } };
+  p2 = 2 + d2 - 2 * cab + 2 * d * (sa - sb);                                           // LSL
+  if (p2 >= 0) { tmp = Math.atan2(cb - ca, d + sa - sb); t = mod2pi(tmp - a); p = Math.sqrt(p2); q = mod2pi(b - tmp); take(0); }
+  p2 = -2 + d2 + 2 * cab + 2 * d * (sa + sb);                                          // LSR
+  if (p2 >= 0) { p = Math.sqrt(p2); tmp = Math.atan2(-ca - cb, d + sa + sb) - Math.atan2(-2, p); t = mod2pi(tmp - a); q = mod2pi(tmp - b); take(1); }
+  p2 = -2 + d2 + 2 * cab - 2 * d * (sa + sb);                                          // RSL
+  if (p2 >= 0) { p = Math.sqrt(p2); tmp = Math.atan2(ca + cb, d - sa - sb) - Math.atan2(2, p); t = mod2pi(a - tmp); q = mod2pi(b - tmp); take(2); }
+  p2 = 2 + d2 - 2 * cab + 2 * d * (sb - sa);                                           // RSR
+  if (p2 >= 0) { tmp = Math.atan2(ca - cb, d - sa + sb); t = mod2pi(a - tmp); p = Math.sqrt(p2); q = mod2pi(tmp - b); take(3); }
+  tmp = (6 - d2 + 2 * cab + 2 * d * (sa - sb)) / 8;                                    // RLR
+  if (Math.abs(tmp) <= 1) { phi = Math.atan2(ca - cb, d - sa + sb); p = mod2pi(TAU - Math.acos(tmp)); t = mod2pi(a - phi + mod2pi(p / 2)); q = mod2pi(a - b - t + mod2pi(p)); take(4); }
+  tmp = (6 - d2 + 2 * cab + 2 * d * (sb - sa)) / 8;                                    // LRL
+  if (Math.abs(tmp) <= 1) { phi = Math.atan2(ca - cb, d + sa - sb); p = mod2pi(TAU - Math.acos(tmp)); t = mod2pi(-a - phi + p / 2); q = mod2pi(b - a - t + mod2pi(p)); take(5); }
+  if (bw < 0) return wantPath ? null : Infinity;
+  if (!wantPath) return best * rho;
+  return { w: bw, seg: [s0, s1, s2], len: best * rho, rho, q0x: x0, q0y: y0, q0t: t0 };
+}
+/** Dubins yolunu s [m] yay uzunluğunda örnekler → q = {x, y, th}. */
+function dubinsSample(D, s, q) {
+  let tp = s / D.rho, x = 0, y = 0, t = D.q0t; const ty = DUBINS_TYPES[D.w];
+  for (let k = 0; k < 3; k++) {
+    const L = D.seg[k], l = Math.min(tp, L);
+    if (ty[k] === 0) { x += Math.sin(t + l) - Math.sin(t); y += -Math.cos(t + l) + Math.cos(t); t += l; }
+    else if (ty[k] === 2) { x += -Math.sin(t - l) + Math.sin(t); y += Math.cos(t - l) - Math.cos(t); t -= l; }
+    else { x += Math.cos(t) * l; y += Math.sin(t) * l; }
+    if (tp <= L) break; tp -= L;
+  }
+  q.x = D.q0x + x * D.rho; q.y = D.q0y + y * D.rho; q.th = t;
+}
+
+/* ------------------------------- 7. KÜRESEL PLANLAYICI ------------------------------------ */
+const NB_I = [1, -1, 0, 0, 1, 1, -1, -1], NB_J = [0, 0, 1, -1, 1, -1, 1, -1], NB_L = [1, 1, 1, 1, SQ2, SQ2, SQ2, SQ2];
+function makePath(pts) {
+  const n = pts.length, cum = new Float32Array(n);
+  for (let i = 1; i < n; i++) cum[i] = cum[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+  return { pts, cum, len: n ? cum[n - 1] : 0 };
+}
+
+class GlobalPlanner {
+  constructor(cm) {
+    this.cm = cm; const N = cm.N;
+    this.g = new Float32Array(N); this.seen = new Uint32Array(N); this.closed = new Uint32Array(N); this.par = new Int32Array(N);
+    this.hgrid = new Float32Array(N); this.stamp = 0; this.heap = new MinHeap(1 << 16);
+    this.stats = { ms: 0, exp: 0, algo: '—', len: 0, note: '', slices: 0, maxSlice: 0 }; this.hyb = null; this.pool = null;
+    this.C = new Uint8Array(N);   // maliyet anlık görüntüsü: arama boyunca sabit (Nav2'de planlama sırasında costmap kilidi)
+    this.job = null;
+    // Dilim başına iş birimi (deterministik: süreye değil sayıma dayalı). Ölçülen tipik dilim süresi < 5 ms.
+    this.CH_GRID = 10000;           // ızgara A* / Dijkstra: yığın çekimi
+    this.CH_HYB = 300;              // hibrit A*: düğüm genişletmesi
+  }
+  cellOf(x, y) { const cm = this.cm, i = Math.floor(x * cm.inv), j = Math.floor(y * cm.inv); return (i < 0 || j < 0 || i >= cm.W || j >= cm.H) ? -1 : j * cm.W + i; }
+  cost(x, y) {
+    const cm = this.cm; if (x < 0 || y < 0) return 254;
+    const i = (x * cm.inv) | 0, j = (y * cm.inv) | 0; if (i >= cm.W || j >= cm.H) return 254;
+    return this.C[j * cm.W + i];
+  }
+  /**
+   * Asenkron, dilimli planlama (Nav2 planner_server'ın ayrı iş parçacığı karşılığı). begin() maliyet haritasının
+   * anlık görüntüsünü alır ve bir üreteç (generator) başlatır; step() her kontrol döngüsünde bir dilim ilerletir
+   * (CH_GRID / CH_HYB iş birimi). Böylece en kötü durum arama süresi tek kareye yığılmaz; robot bu sırada
+   * eski yolu izlemeye devam eder. Dilim sınırları iterasyon sayısına bağlı olduğundan sonuç deterministiktir.
+   * mode: 'auto' (diff→ızgara, üçteker→hibrit) | 'grid' | 'hybrid'. Hibrit başarısızsa ızgara A*'a düşer.
+   */
+  begin(start, goal, kind, mode) {
+    this.C.set(this.cm.master);
+    const s = { x: start.x, y: start.y, th: start.th }, g = { x: goal.x, y: goal.y, th: goal.th };
+    this.job = { gen: this.planGen(s, g, kind, mode), ms: 0, slices: 0, maxSlice: 0 };
+  }
+  cancel() { this.job = null; }
+  get busy() { return this.job !== null; }
+  step() {
+    const j = this.job; if (!j) return null;
+    const t0 = nowMs(), r = j.gen.next(), dt = nowMs() - t0;
+    j.ms += dt; j.slices++; if (dt > j.maxSlice) j.maxSlice = dt;
+    if (!r.done) return null;
+    const res = r.value; res.ms = j.ms; res.slices = j.slices; res.maxSlice = j.maxSlice; this.job = null;
+    this.stats = { ms: res.ms, exp: res.exp || 0, algo: res.algo || '—', len: res.ok ? res.path.len : 0, note: res.note || '', slices: j.slices, maxSlice: j.maxSlice };
+    return res;
+  }
+  planSync(start, goal, kind, mode) { this.begin(start, goal, kind, mode); let r = null; while (!r) r = this.step(); return r; }
+  *planGen(start, goal, kind, mode) {
+    const useHyb = mode === 'hybrid' || (mode === 'auto' && kind !== 'diff');
+    if (useHyb) {
+      let res = yield* this.hybridGen(start, goal, kind);
+      if (!res.ok && res.reason !== 'GOAL_IN_COLLISION' && res.reason !== 'OUT_OF_MAP') {
+        const r2 = yield* this.gridGen(start, goal); r2.note = `Hibrit A* sonuçsuz (${res.reason}, ${res.exp} genişletme) → ızgara A*`; r2.exp += res.exp; res = r2;
+      }
+      return res;
+    }
+    return yield* this.gridGen(start, goal);
+  }
+  /**
+   * 8-bağlantılı A*, maliyet-ağırlıklı kenarlar:  c(e) = ℓ·res·(1 + w_c·c_hücre/252)  (NavFn benzeri)
+   * Sezgisel: oktil mesafe h = res·(max + (√2−1)·min) — kenar çarpanı ≥ 1 olduğundan kabul edilebilir.
+   * 253 (içsel) hücreler yalnızca başlangıca (r + 0.3 m) yakınken geçilebilir (yakın-engelden kaçış).
+   * Köşe kesme: çapraz adımda ortogonal komşulardan biri ölümcülse adım yasak.
+   */
+  *gridGen(start, goal) {
+    const cm = this.cm, W = cm.W, H = cm.H, res = cm.res, C = this.C, cw = CFG.planner.costW;
+    const s = this.cellOf(start.x, start.y), t = this.cellOf(goal.x, goal.y);
+    if (s < 0 || t < 0) return { ok: false, reason: 'OUT_OF_MAP', exp: 0, algo: 'A*' };
+    if (C[t] >= 253) return { ok: false, reason: 'GOAL_IN_COLLISION', exp: 0, algo: 'A*' };
+    const si = s % W, sj = (s - si) / W, gi = t % W, gj = (t - gi) / W;
+    const st = ++this.stamp, g = this.g, seen = this.seen, closed = this.closed, par = this.par, hp = this.heap;
+    const esc2 = Math.pow((CFG.robot.radius + 0.3) / res, 2), k2 = SQ2 - 1;
+    hp.clear(); g[s] = 0; seen[s] = st; par[s] = -1;
+    const h0x = Math.abs(si - gi), h0y = Math.abs(sj - gj);
+    hp.push(res * (h0x > h0y ? h0x + k2 * h0y : h0y + k2 * h0x), s);
+    let exp = 0, found = false, ops = 0;
+    while (hp.n) {
+      const cur = hp.pop(); if (closed[cur] === st) continue;
+      closed[cur] = st; exp++;
+      if (++ops >= this.CH_GRID) { ops = 0; yield; }
+      if (cur === t) { found = true; break; }
+      const ci = cur % W, cj = (cur - ci) / W, gc = g[cur];
+      for (let k = 0; k < 8; k++) {
+        const ni = ci + NB_I[k], nj = cj + NB_J[k];
+        if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
+        const nid = nj * W + ni; if (closed[nid] === st) continue;
+        const c = C[nid];
+        if (c === 254) continue;
+        if (c === 253) { const ei = ni - si, ej = nj - sj; if (ei * ei + ej * ej > esc2) continue; }
+        if (k >= 4 && (C[cj * W + ni] === 254 || C[nj * W + ci] === 254)) continue;
+        const ng = gc + NB_L[k] * res * (1 + cw * (c > 252 ? 252 : c) / 252);
+        if (seen[nid] !== st || ng < g[nid]) {
+          seen[nid] = st; g[nid] = ng; par[nid] = cur;
+          const hx = Math.abs(ni - gi), hy = Math.abs(nj - gj);
+          hp.push(ng + res * (hx > hy ? hx + k2 * hy : hy + k2 * hx), nid);
+        }
+      }
+    }
+    if (!found) return { ok: false, reason: 'NO_PATH', exp, algo: 'A*' };
+    const pts = [];
+    for (let c = t; c !== -1; c = par[c]) { const i = c % W, j = (c - i) / W; pts.push({ x: (i + 0.5) * res, y: (j + 0.5) * res, th: 0 }); }
+    pts.reverse();
+    pts[0].x = start.x; pts[0].y = start.y;
+    if (pts.length === 1) pts.push({ x: goal.x, y: goal.y, th: goal.th });
+    else { const e = pts[pts.length - 1]; e.x = goal.x; e.y = goal.y; }
+    this.smooth(pts);
+    for (let i = 0; i < pts.length - 1; i++) pts[i].th = Math.atan2(pts[i + 1].y - pts[i].y, pts[i + 1].x - pts[i].x);
+    pts[pts.length - 1].th = goal.th;
+    return { ok: true, path: makePath(pts), exp, algo: 'A* 8-bağ. + düzgünleştirme' };
+  }
+  /**
+   * Gradyan düzgünleştirici: p_i ← p_i + w_d(o_i − p_i) + w_s(p_{i−1} + p_{i+1} − 2p_i)
+   * Yeni nokta İÇSEL/ÖLÜMCÜL bölgeye girerse ya da maliyeti orijinalden > 40 artarsa adım reddedilir.
+   */
+  smooth(pts) {
+    const n = pts.length; if (n < 5) return;
+    const ox = pts.map(p => p.x), oy = pts.map(p => p.y), oc = pts.map(p => this.cost(p.x, p.y));
+    const wd = 0.15, ws = 0.35;
+    for (let it = 0; it < 80; it++) {
+      let ch = 0;
+      for (let i = 1; i < n - 1; i++) {
+        const p = pts[i];
+        const nx = p.x + wd * (ox[i] - p.x) + ws * (pts[i - 1].x + pts[i + 1].x - 2 * p.x);
+        const ny = p.y + wd * (oy[i] - p.y) + ws * (pts[i - 1].y + pts[i + 1].y - 2 * p.y);
+        const c = this.cost(nx, ny);
+        if (c < 253 && c <= oc[i] + 40) { ch += Math.abs(nx - p.x) + Math.abs(ny - p.y); p.x = nx; p.y = ny; }
+      }
+      if (ch < 1e-4) break;
+    }
+  }
+  /** Hedeften maliyet-ağırlıklı Dijkstra → Hibrit A* için "engelli holonomik" sezgisel tablosu. */
+  *dijkstraGen(t) {
+    const cm = this.cm, W = cm.W, H = cm.H, res = cm.res, C = this.C, cw = CFG.planner.costW;
+    const h = this.hgrid, closed = this.closed, hp = this.heap, st = ++this.stamp;
+    h.fill(Infinity); h[t] = 0; hp.clear(); hp.push(0, t);
+    let ops = 0;
+    while (hp.n) {
+      const cur = hp.pop(); if (closed[cur] === st) continue;
+      closed[cur] = st;
+      if (++ops >= this.CH_GRID) { ops = 0; yield; }
+      const hc = h[cur], ci = cur % W, cj = (cur - ci) / W;
+      for (let k = 0; k < 8; k++) {
+        const ni = ci + NB_I[k], nj = cj + NB_J[k];
+        if (ni < 0 || nj < 0 || ni >= W || nj >= H) continue;
+        const nid = nj * W + ni; if (closed[nid] === st) continue;
+        const c = C[nid]; if (c >= 253) continue;
+        if (k >= 4 && (C[cj * W + ni] === 254 || C[nj * W + ci] === 254)) continue;
+        const nh = hc + NB_L[k] * res * (1 + cw * c / 252);
+        if (nh < h[nid]) { h[nid] = nh; hp.push(nh, nid); }
+      }
+    }
+  }
+  /**
+   * Hibrit A* (Dolgov ve ark. 2008, yalnızca ileri yön):
+   *  - Durum (x, y, θ) sürekli; kafes 0.2 m × 0.2 m × 5° (72 yön kutusu); kutu başına en iyi düğüm.
+   *  - Hareket ilkelleri: κ ∈ {−κ_max, −κ_max/2, 0, κ_max/2, κ_max}, yay uzunluğu 0.3 m, 0.1 m'de çarpışma örneklemesi.
+   *    κ_max = tanδ_max / L_wb (üçteker), 1/0.30 m (diferansiyel).
+   *  - g artışı: Δs(1 + w_c·c̄/252) + direksiyon cezası + direksiyon değişim cezası.
+   *  - h = max(h_Dijkstra(engelli, holonomik), L_Dubins(engelsiz, holonomik olmayan)).
+   *  - Analitik genişletme: hedefe < 5 m iken her 4 genişletmede (< 1.5 m'de her seferinde) Dubins atışı.
+   */
+  *hybridGen(start, goal, kind) {
+    const cm = this.cm, R = CFG.robot, cw = CFG.planner.costW, res = cm.res;
+    const t = this.cellOf(goal.x, goal.y);
+    if (t < 0) return { ok: false, reason: 'OUT_OF_MAP', exp: 0, algo: 'Hibrit A*' };
+    if (this.C[t] >= 253) return { ok: false, reason: 'GOAL_IN_COLLISION', exp: 0, algo: 'Hibrit A*' };
+    yield* this.dijkstraGen(t);
+    const kmax = kind === 'diff' ? 1 / 0.30 : Math.tan(R.steerMax) / R.wheelbase, rho = 1 / kmax;
+    const XYB = 0.2, NTH = 72, BW = Math.ceil(cm.W * res / XYB), BH = Math.ceil(cm.H * res / XYB), NB = BW * BH * NTH;
+    if (!this.hyb || this.hyb.NB !== NB) this.hyb = { NB, node: new Int32Array(NB), seen: new Uint32Array(NB), closed: new Uint32Array(NB), st: 0 };
+    const HB = this.hyb, st = ++HB.st;
+    const MAXIT = CFG.planner.hybridMaxIter, MAXN = MAXIT * 5 + 16;
+    if (!this.pool || this.pool.cap < MAXN) this.pool = { cap: MAXN, x: new Float64Array(MAXN), y: new Float64Array(MAXN), t: new Float64Array(MAXN), g: new Float64Array(MAXN), par: new Int32Array(MAXN), k: new Float32Array(MAXN), b: new Int32Array(MAXN) };
+    const P = this.pool, hg = this.hgrid, hp = this.heap;
+    const KS = [-kmax, -kmax / 2, 0, kmax / 2, kmax], DS = 0.3, SUB = 3, hs = DS / SUB;
+    const bin = (x, y, th) => {
+      const bi = Math.floor(x / XYB), bj = Math.floor(y / XYB);
+      if (bi < 0 || bj < 0 || bi >= BW || bj >= BH) return -1;
+      let bt = Math.floor(mod2pi(th) / TAU * NTH); if (bt >= NTH) bt = 0;
+      return (bj * BW + bi) * NTH + bt;
+    };
+    const Hf = (x, y, th) => {
+      const c = this.cellOf(x, y); let a = c >= 0 ? hg[c] : Infinity;
+      if (!(a < Infinity)) a = 2 * Math.hypot(goal.x - x, goal.y - y);
+      const dl = dubins(x, y, th, goal.x, goal.y, goal.th, rho, false);
+      return dl < Infinity && dl > a ? dl : a;
+    };
+    const okCost = (x, y) => {   // geçilebilir maliyet ya da −1 (başlangıç çevresinde içsel bölgeye izin)
+      const c = this.cost(x, y);
+      if (c < 253) return c;
+      if (c === 253 && Math.hypot(x - start.x, y - start.y) < 0.45) return 252;
+      return -1;
+    };
+    let n = 0;
+    const add = (x, y, th, g, par, k, b) => { P.x[n] = x; P.y[n] = y; P.t[n] = th; P.g[n] = g; P.par[n] = par; P.k[n] = k; P.b[n] = b; return n++; };
+    hp.clear();
+    const b0 = bin(start.x, start.y, start.th);
+    if (b0 < 0) return { ok: false, reason: 'OUT_OF_MAP', exp: 0, algo: 'Hibrit A*' };
+    const s0 = add(start.x, start.y, start.th, 0, -1, 0, b0);
+    HB.seen[b0] = st; HB.node[b0] = s0; hp.push(Hf(start.x, start.y, start.th), s0);
+    let it = 0, found = -1, tail = null, ops = 0;
+    while (hp.n && it < MAXIT && n < MAXN - 6) {
+      const cur = hp.pop(), b = P.b[cur];
+      if (HB.node[b] !== cur || HB.closed[b] === st) continue;
+      HB.closed[b] = st; it++;
+      if (++ops >= this.CH_HYB) { ops = 0; yield; }
+      const x = P.x[cur], y = P.y[cur], th = P.t[cur], dg = Math.hypot(goal.x - x, goal.y - y);
+      if (dg < 0.12 && Math.abs(wrap(goal.th - th)) < 0.09) { found = cur; break; }
+      if (dg < 5 && (it % 4 === 0 || dg < 1.5)) { const tl = this.dubinsShot(x, y, th, goal, rho, okCost); if (tl) { found = cur; tail = tl; break; } }
+      for (let q = 0; q < 5; q++) {
+        const k = KS[q]; let cx = x, cy = y, ct = th, cs = 0, ok = true;
+        for (let u = 0; u < SUB; u++) {
+          if (Math.abs(k) < 1e-9) { cx += hs * Math.cos(ct); cy += hs * Math.sin(ct); }
+          else { const t2 = ct + k * hs; cx += (Math.sin(t2) - Math.sin(ct)) / k; cy -= (Math.cos(t2) - Math.cos(ct)) / k; ct = t2; }
+          const c = okCost(cx, cy); if (c < 0) { ok = false; break; } cs += c;
+        }
+        if (!ok) continue;
+        const nb = bin(cx, cy, ct); if (nb < 0 || nb === b) continue;
+        if (HB.seen[nb] === st && HB.closed[nb] === st) continue;
+        const ng = P.g[cur] + DS * (1 + cw * (cs / SUB) / 252) + 0.05 * DS * Math.abs(k) / kmax + 0.10 * Math.abs(k - P.k[cur]) / kmax;
+        if (HB.seen[nb] !== st || ng < P.g[HB.node[nb]] - 1e-9) {
+          const id = add(cx, cy, wrap(ct), ng, cur, k, nb); HB.seen[nb] = st; HB.node[nb] = id; hp.push(ng + Hf(cx, cy, ct), id);
+        }
+      }
+    }
+    if (found < 0) return { ok: false, reason: it >= MAXIT ? 'ITER_LIMIT' : 'EXHAUSTED', exp: it, algo: 'Hibrit A*' };
+    const chain = []; for (let c = found; c !== -1; c = P.par[c]) chain.push(c); chain.reverse();
+    const pts = [{ x: start.x, y: start.y, th: start.th }];
+    for (let i = 1; i < chain.length; i++) {          // ilkelleri 0.1 m aralıklarla yeniden üret (yoğunlaştırma)
+      const pi = chain[i - 1], k = P.k[chain[i]]; let cx = P.x[pi], cy = P.y[pi], ct = P.t[pi];
+      for (let u = 0; u < SUB; u++) {
+        if (Math.abs(k) < 1e-9) { cx += hs * Math.cos(ct); cy += hs * Math.sin(ct); }
+        else { const t2 = ct + k * hs; cx += (Math.sin(t2) - Math.sin(ct)) / k; cy -= (Math.cos(t2) - Math.cos(ct)) / k; ct = t2; }
+        pts.push({ x: cx, y: cy, th: wrap(ct) });
+      }
+    }
+    if (tail) for (let i = 1; i < tail.length; i++) pts.push(tail[i]);
+    else pts.push({ x: goal.x, y: goal.y, th: goal.th });
+    return { ok: true, path: makePath(pts), exp: it, algo: `Hibrit A* + Dubins (ρ=${rho.toFixed(2)} m)` };
+  }
+  dubinsShot(x, y, th, goal, rho, okCost) {
+    const D = dubins(x, y, th, goal.x, goal.y, goal.th, rho, true); if (!D) return null;
+    const n = Math.max(1, Math.ceil(D.len / 0.1)), out = [], q = { x: 0, y: 0, th: 0 };
+    for (let i = 0; i <= n; i++) { dubinsSample(D, D.len * i / n, q); if (okCost(q.x, q.y) < 0) return null; out.push({ x: q.x, y: q.y, th: wrap(q.th) }); }
+    return out;
+  }
+}
+
+/* ------------------------------- 8. YEREL PLANLAYICI (DWA) -------------------------------- */
+class LocalPlanner {
+  constructor(cm) {
+    this.cm = cm; this.MS = 41 * 41; this.MP = 64;
+    this.buf = new Float32Array(this.MS * this.MP * 2);   // yörünge noktaları (x,y) — çizim için
+    this.np = new Uint8Array(this.MS); this.adm = new Uint8Array(this.MS);
+    this.sc = new Float32Array(this.MS); this.sv = new Float32Array(this.MS); this.sw = new Float32Array(this.MS); this.mc = new Float32Array(this.MS);
+    this.count = 0; this.best = -1; this.ms = 0; this.pathIdx = 0; this.carrot = { x: 0, y: 0 };
+    this.out = { v: 0, w: 0, mode: '—', minClear: 0, nAdm: 0 };
+  }
+  closest(path, from, x, y) {
+    const P = path.pts; let bi = from, bd = Infinity; const e = Math.min(P.length, from + 120);
+    for (let i = from; i < e; i++) { const dx = P[i].x - x, dy = P[i].y - y, d = dx * dx + dy * dy; if (d < bd) { bd = d; bi = i; } }
+    return bi;
+  }
+  ahead(path, i, L) { const c = path.cum, t = c[i] + L, n = path.pts.length; while (i < n - 1 && c[i] < t) i++; return i; }
+  /**
+   * Bir kontrol döngüsü. Sıra:
+   *  (a) Yol üzerinde en yakın indeks (yalnızca ileri arama), havuç noktası.
+   *  (b) Dönüş-şimi (yalnız diferansiyel): havuca yön hatası > 0.9 rad ise yerinde dönüş (Nav2 RotationShim).
+   *  (c) V_s ∩ V_d penceresinde n_v × n_ω örnek (üçteker: v × δ_hedef, açılımda δ̇_max rampası simüle edilir).
+   *  (d) Her örnek için N = ufuk/Δt adımlı açılım; maliyet ≥ 253 → çarpışma mesafesi.
+   *  (e) V_a: v²/(2a_fren) + 0.06 < d_çarpışma değilse reddedilir.
+   *  (f) G = α·heading + β·dist + γ·velocity + δ·progress
+   *      heading  = 1 − |∠(uç noktadan havuca) − θ_uç|/π
+   *      dist     = min(1, min açıklık / d_güv), d_güv = min(r_şiş − r_içsel, 0.08 m)
+   *      velocity = v / v_max
+   *      progress = clamp((|c − p₀| − |c − p_uç|) / (v_max·T), 0, 1)  — şartnamedeki "ilerleme" ölçütü; Fox–Burgard–Thrun
+   *                 G(v,ω) formülüne eklenen 4. terim. Gerekçe: yalnız 3 terimle, kapı geçişi gibi dar yerlerde
+   *                 ileri yörüngelerin açıklığı azaldığı için v = 0 (yerinde bekleme) en yüksek puanı alabiliyor
+   *                 (klasik DWA yerel minimumu); progress terimi beklemeye 0 puan verir.
+   *      Havuç ileri bakış mesafesi v'ye bağlı: L(v) = max(0.5, v·T + 0.4) — uç noktanın havucu aşmasını önler.
+   *  (g) V_r boşsa: yapay potansiyel alan geri çekilmesi (çekici: havuç, itici: LIDAR isabetleri).
+   */
+  compute(pose, robot, path, pathIdx, goal, avoid, hits, nHits) {
+    const t0 = nowMs(), R = CFG.robot, D = CFG.dwa, cm = this.cm, out = this.out, P = path.pts;
+    const dtc = 1 / D.hz, idx = this.closest(path, pathIdx, pose.x, pose.y); this.pathIdx = idx;
+    const dGoal = Math.hypot(goal.x - pose.x, goal.y - pose.y), v0 = robot.v, w0 = robot.w, tri = robot.kind !== 'diff';
+    let vLo = Math.max(0, v0 - R.aBrake * dtc), vHi = Math.min(R.vMax, v0 + R.aMax * dtc);
+    const vStop = Math.max(0.06, Math.sqrt(2 * R.aBrake * 0.5 * Math.max(0, dGoal - 0.03)));  // hedefte durabilme sınırı (0.06 m/s sürünme tabanı)
+    vHi = Math.max(vLo, Math.min(vHi, vStop));
+    const wLo = Math.max(-R.wMax, w0 - R.alphaMax * dtc), wHi = Math.min(R.wMax, w0 + R.alphaMax * dtc);
+
+    const c0 = P[this.ahead(path, idx, 0.6)]; this.carrot.x = c0.x; this.carrot.y = c0.y;
+    const eC = wrap(Math.atan2(c0.y - pose.y, c0.x - pose.x) - pose.th);
+    if (!tri && Math.abs(eC) > 0.9 && dGoal > 0.4) {
+      out.v = vLo; out.w = clamp(clamp(1.6 * eC, -0.9 * R.wMax, 0.9 * R.wMax), wLo, wHi);
+      out.mode = 'ROT_SHIM'; out.nAdm = 0; out.minClear = cm.clearanceOf(cm.costAt(pose.x, pose.y));
+      this.count = 0; this.best = -1; this.ms = nowMs() - t0; return out;
+    }
+    const nv = (vHi - vLo) < 1e-4 ? 1 : D.nv, nw = D.nw;
+    const steps = Math.min(this.MP - 1, Math.max(2, Math.round(D.horizon / D.dt))), dt = D.dt;
+    const span = Math.max(1e-3, CFG.costmap.inflR - cm.rInsc), dSafe = Math.min(span, 0.08);
+    const startCost = cm.costAt(pose.x, pose.y), startIn = startCost >= 253;
+    const beta = avoid ? D.beta * 1.8 : D.beta, gamma = avoid ? D.gamma * 0.6 : D.gamma;
+    let best = -1, bestG = -Infinity, cnt = 0, nAdm = 0;
+    const buf = this.buf, MP2 = this.MP * 2;
+    for (let a = 0; a < nv; a++) {
+      const v = nv === 1 ? vLo : vLo + (vHi - vLo) * a / (nv - 1);
+      const ci = this.ahead(path, idx, Math.max(0.5, v * D.horizon + 0.4));
+      const cx = P[ci].x, cy = P[ci].y, cth = P[ci].th;
+      const sCap = ci === P.length - 1 ? dGoal : Infinity;
+      const d0c = Math.hypot(cx - pose.x, cy - pose.y), progNorm = Math.max(0.05, R.vMax * D.horizon);   // havuç = hedef ise açılım hedef mesafesinde kesilir (aşma → yön terimi tersine dönmez)
+      for (let b = 0; b < nw; b++) {
+        if (tri && v < 1e-4 && b > 0) continue;                    // üçteker v=0 → tek örnek (dur)
+        // Üçteker: hedef direksiyon açısı δ_h ∈ [−δ_max, δ_max] örneklenir; açılımda δ(t) δ̇_max ile δ_h'ye rampalanır
+        // (eyleyici dinamiği modelde → V_d örtük olarak sağlanır). Komut ω = v·tanδ_h/L_wb.
+        const dT = tri ? -R.steerMax + 2 * R.steerMax * b / (nw - 1) : 0;
+        const w = tri ? v * Math.tan(dT) / R.wheelbase : (nw === 1 ? wLo : wLo + (wHi - wLo) * b / (nw - 1));
+        const base = cnt * MP2;
+        let x = pose.x, y = pose.y, th = pose.th, s = 0, minC = span, coll = -1, np = 1;
+        buf[base] = x; buf[base + 1] = y;
+        if (v < 1e-4) {                                             // yerinde dönüş: daire ayak izi dönmeyle değişmez
+          if (startCost >= 254) coll = 0; else minC = cm.clearanceOf(startCost);
+          th = pose.th + w * steps * dt;
+        } else {
+          let hw = w * dt * 0.5, del = robot.delta; const vd = v * dt, dStep = R.steerRate * dt;
+          for (let k = 0; k < steps; k++) {
+            if (tri) { del += clamp(dT - del, -dStep, dStep); hw = v * Math.tan(del) / R.wheelbase * dt * 0.5; }
+            th += hw; x += vd * Math.cos(th); y += vd * Math.sin(th); th += hw; s += vd;
+            const c = cm.costAt(x, y);
+            if (c >= 253 && !(startIn && s < 0.35)) { coll = s; break; }
+            const cl = cm.clearanceOf(c); if (cl < minC) minC = cl;
+            buf[base + np * 2] = x; buf[base + np * 2 + 1] = y; np++;
+            if (s >= sCap) break;
+          }
+        }
+        let ok = true;
+        if (coll >= 0) { ok = v > 1e-4 && (v * v / (2 * R.aBrake) + 0.06 < coll); minC = 0; }
+        let G = -Infinity;
+        if (ok) {
+          // Uç nokta havuca < 0.15 m: ara havuçta yol teğetine hizalanma; havuç = hedef ise hedefe varış tam puan
+          // (diferansiyelde θ_g ayrı yerinde-dönüş fazında sağlanır). Üçteker yerinde dönemez → θ_g yol teğetiyle izlenir.
+          const dx = cx - x, dy = cy - y, near = dx * dx + dy * dy < 0.0225;
+          const head = near && sCap < Infinity && !tri ? 1 : 1 - Math.abs(wrap((near ? cth : Math.atan2(dy, dx)) - th)) / Math.PI;
+          const prog = clamp((d0c - Math.hypot(dx, dy)) / progNorm, 0, 1);
+          G = D.alpha * head + beta * Math.min(1, minC / dSafe) + gamma * (v / R.vMax) + D.delta * prog;
+          nAdm++; if (G > bestG) { bestG = G; best = cnt; }
+        }
+        this.np[cnt] = np; this.adm[cnt] = ok ? 1 : 0; this.sc[cnt] = G; this.sv[cnt] = v; this.sw[cnt] = w; this.mc[cnt] = minC; cnt++;
+      }
+    }
+    this.count = cnt; this.best = best; out.nAdm = nAdm;
+    if (best >= 0) { out.v = this.sv[best]; out.w = this.sw[best]; out.mode = 'DWA'; out.minClear = this.mc[best]; }
+    else this.potentialField(pose, robot, hits, nHits);
+    this.ms = nowMs() - t0; return out;
+  }
+  /**
+   * Yapay potansiyel alan (Khatib 1986) — DWA'da kabul edilebilir yörünge kalmadığında yumuşak geri çekilme.
+   *   F = F_çek + Σ F_it ;  F_çek = ê(havuç − p) ;  F_it = k_r(1/d − 1/d₀)(1/d²)·ê(p − o_i),  d < d₀ = 1.2 m
+   *   (d: ayak izi yüzeyinden mesafe). Komut yön hatasından türetilir; hız ön açıklıkla ölçeklenir,
+   *   ön kapalı/arka açıksa düşük hızla geri gidilir.
+   */
+  potentialField(pose, robot, hits, nHits) {
+    const R = CFG.robot, cm = this.cm, out = this.out;
+    let fx = this.carrot.x - pose.x, fy = this.carrot.y - pose.y; const dn = Math.hypot(fx, fy) || 1; fx /= dn; fy /= dn;
+    const d0 = 1.2, kr = 0.05;
+    for (let i = 0; i < nHits; i++) {
+      const ex = pose.x - hits[2 * i], ey = pose.y - hits[2 * i + 1], d = Math.hypot(ex, ey);
+      if (d < 1e-3) continue;
+      const dd = Math.max(0.05, d - R.radius); if (dd >= d0) continue;
+      const m = kr * (1 / dd - 1 / d0) / (dd * dd); fx += m * ex / d; fy += m * ey / d;
+    }
+    const err = wrap(Math.atan2(fy, fx) - pose.th), fc = this.freeAlong(pose, 1), rc = this.freeAlong(pose, -1);
+    let v, w;
+    if (robot.kind === 'diff') {
+      w = clamp(1.5 * err, -1.0, 1.0);
+      v = 0.25 * Math.max(0, Math.cos(err)) * clamp((fc - 0.1) / 0.5, 0, 1);
+      if (fc < 0.12 && rc > 0.3) v = -0.06;
+    } else {
+      const km = Math.tan(R.steerMax) / R.wheelbase; let k = clamp(2 * err, -km, km);
+      if (fc > 0.3) v = 0.12; else if (rc > 0.3) { v = -0.08; k = -k; } else v = 0;
+      w = v * k;
+    }
+    out.v = v; out.w = w; out.mode = 'PF_FALLBACK'; out.minClear = cm.clearanceOf(cm.costAt(pose.x, pose.y));
+  }
+  freeAlong(pose, dir) {
+    for (let s = 0.1; s <= 0.81; s += 0.1) {
+      if (this.cm.costAt(pose.x + dir * s * Math.cos(pose.th), pose.y + dir * s * Math.sin(pose.th)) >= 253) return s - 0.1;
+    }
+    return 0.8;
+  }
+}
+
+/* ------------------------------- 9. GÖREV SONLU DURUM MAKİNESİ ---------------------------- */
+const ST = { BOOT: 'BOOT_CALIBRATION', IDLE: 'IDLE', PLAN: 'GLOBAL_PLANNING', TRACK: 'TRACKING_NAV', AVOID: 'OBSTACLE_AVOIDANCE', RECOV: 'RECOVERY_SPIN', GOAL: 'GOAL_ALIGNED' };
+/*
+ * Geçişler:
+ *   BOOT ──(1.5 s, ≥5 tarama, odometri sıfırlama)──▶ IDLE | PLAN (kuyrukta hedef varsa)
+ *   IDLE / GOAL ──(yeni hedef)──▶ PLAN
+ *   PLAN ──(yol bulundu)──▶ TRACK ;  ──(hedef statik engelde | 15 s dinamik işgal)──▶ IDLE ;  ──(yol yok)──▶ RECOV
+ *   TRACK ⇄ AVOID  (tetik: yol önündeki 2.5 m tıkalı | DWA boş → PF | min açıklık < 0.10 m ; çıkış: 0.8 s temiz)
+ *   TRACK/AVOID ──(PF > 4 s | 8 s'de yol boyunca < 0.15 m ilerleme | tıkalı yol yeniden planlanamıyor)──▶ RECOV
+ *   TRACK/AVOID ──(|p − p_g| < tol, diferansiyelde ayrıca |θ − θ_g| < tol_θ)──▶ GOAL
+ *   RECOV: yerel engel katmanı temizleme (r = 2.5 m) + π dönüş (diff) / 0.35 m geri (üçteker) ──▶ PLAN ;
+ *          5. kurtarmada görev iptal ──▶ IDLE
+ */
+class Navigator {
+  constructor(sim) {
+    this.sim = sim; this.state = ST.BOOT; this.tState = 0; this.lastEdge = null;
+    this.goal = null; this.path = null; this.pathIdx = 0; this.recoveries = 0;
+    this.replanT = 0; this.avoidClearT = 0; this.pfT = 0; this.prog = { best: Infinity, t: 0 };
+    this.rec = null; this.ctrlMode = '—'; this.aligning = false; this.lastPlan = null; this.blocked = false;
+  }
+  set(s, why, lvl) {
+    if (s === this.state) return;
+    this.lastEdge = [this.state, s];
+    this.sim.log(lvl || 'INFO', `FSM ${this.state} → ${s}${why ? ' · ' + why : ''}`);
+    this.state = s; this.tState = 0; this.onEnter(s);
+  }
+  onEnter(s) {
+    const r = this.sim.robot;
+    if (s === ST.PLAN || s === ST.TRACK) { this.prog = { best: Infinity, t: 0 }; this.pfT = 0; this.avoidClearT = 0; this.replanT = 0; }
+    if (s === ST.PLAN || s === ST.RECOV || s === ST.IDLE || s === ST.GOAL) this.sim.planner.cancel();
+    if (s === ST.PLAN) this.waitLogged = false;
+    if (s === ST.RECOV) this.startRecovery();
+    if (s === ST.GOAL || s === ST.IDLE) { r.setCommand(0, 0); this.ctrlMode = 'HOLD'; }
+  }
+  setGoal(g) {
+    const cm = this.sim.costmap;
+    this.goal = { x: g.x, y: g.y, th: wrap(g.th) }; this.path = null; this.recoveries = 0; this.aligning = false;
+    this.sim.log('INFO', `Hedef alındı (${g.x.toFixed(2)}, ${g.y.toFixed(2)} m, ${(wrap(g.th) * DEG).toFixed(1)}°)`);
+    if (cm.costAt(g.x, g.y) >= 253) this.sim.log('WARN', 'Hedef içsel/ölümcül maliyet bölgesinde — planlama reddedilebilir');
+    if (this.state === ST.BOOT) return;
+    if (this.state === ST.PLAN) { this.tState = 0; this.waitLogged = false; this.sim.planner.cancel(); return; }
+    this.set(ST.PLAN, 'yeni hedef');
+  }
+  cancel() { this.goal = null; this.path = null; this.set(ST.IDLE, 'operatör iptali', 'WARN'); }
+  tick(dt) {
+    const sim = this.sim, r = sim.robot; this.tState += dt;
+    if (r.estop) { r.setCommand(0, 0); this.ctrlMode = 'E-STOP'; return; }
+    const pose = sim.navPose();
+    switch (this.state) {
+      case ST.BOOT:
+        r.setCommand(0, 0); this.ctrlMode = 'CALIB';
+        if (this.tState >= 1.5 && sim.scanCount >= 5) {
+          r.resetOdometry();
+          sim.log('INFO', `Kalibrasyon tamam: enkoder sayaçları sıfırlandı, ${sim.scanCount} tarama ile engel katmanı başlatıldı`);
+          this.set(this.goal ? ST.PLAN : ST.IDLE, 'kalibrasyon tamam');
+        }
+        break;
+      case ST.IDLE: case ST.GOAL: r.setCommand(0, 0); break;
+      case ST.PLAN: {
+        const P = sim.planner;
+        r.setCommand(0, 0); this.ctrlMode = 'PLANNING';
+        if (!P.busy) P.begin(pose, this.goal, r.kind, CFG.planner.mode);
+        const res = P.step(); if (res) this.handlePlan(res, true);
+        break;
+      }
+      case ST.TRACK: case ST.AVOID: this.track(pose, dt); break;
+      case ST.RECOV: this.recovery(pose, dt); break;
+    }
+  }
+  /** Tamamlanan bir plan işinin sonucunu uygular. transition=true: GLOBAL_PLANNING durumundan çağrı. */
+  handlePlan(res, transition) {
+    const sim = this.sim;
+    this.lastPlan = res; sim.metrics.plan = res.ms; sim.metrics.planSlice = res.maxSlice; sim.metrics.planSlices = res.slices;
+    if (res.note) sim.log('WARN', res.note);
+    if (res.ok) {
+      this.path = res.path; this.pathIdx = 0;
+      if (transition) { sim.log('INFO', `Plan: ${res.algo}, ${res.path.len.toFixed(2)} m, ${res.exp} genişletme, ${res.ms.toFixed(1)} ms / ${res.slices} dilim`); this.set(ST.TRACK, 'yol hazır'); }
+      return true;
+    }
+    if (res.reason === 'GOAL_IN_COLLISION') {
+      // Statik katman mı (kalıcı) yoksa engel katmanı mı (dinamik engel izi → geçici)?
+      const cm = sim.costmap, gi = sim.planner.cellOf(this.goal.x, this.goal.y);
+      const permanent = gi < 0 || cm.statInfl[gi] >= 253;
+      if (!permanent) {
+        if (!transition) return false;                                    // izlemede: eski yolla devam
+        sim.robot.setCommand(0, 0); this.ctrlMode = 'WAIT_GOAL';
+        if (!this.waitLogged) { this.waitLogged = true; sim.log('WARN', 'Hedef engel katmanınca işgal edilmiş (dinamik engel) — 15 s boyunca yeniden denenecek'); }
+        if (this.tState < 15) return false;
+      }
+      sim.log('CRITICAL', `Planlama reddedildi: hedef ${permanent ? 'statik engel/içsel bölgede' : '15 s boyunca işgal altında'}`);
+      this.goal = null; this.path = null; this.set(ST.IDLE, 'görev iptal', 'CRITICAL'); return false;
+    }
+    if (res.reason === 'OUT_OF_MAP') {
+      sim.log('CRITICAL', 'Planlama reddedildi: hedef harita dışında');
+      this.goal = null; this.path = null; this.set(ST.IDLE, 'görev iptal', 'CRITICAL'); return false;
+    }
+    sim.log('WARN', `Planlama başarısız: ${res.reason} (${res.exp} genişletme, ${res.ms.toFixed(1)} ms)`);
+    if (transition) this.set(ST.RECOV, 'yol bulunamadı', 'WARN');
+    return false;
+  }
+  pathBlocked() {
+    const p = this.path; if (!p) return false;
+    const P = p.pts, c = p.cum, cm = this.sim.costmap, i0 = this.pathIdx, end = c[i0] + 2.5;
+    for (let i = i0; i < P.length && c[i] <= end; i++) { if (c[i] - c[i0] < 0.35) continue; if (cm.costAt(P[i].x, P[i].y) >= 253) return true; }
+    return false;
+  }
+  track(pose, dt) {
+    const sim = this.sim, r = sim.robot, g = this.goal, G = CFG.goal;
+    const dxy = Math.hypot(g.x - pose.x, g.y - pose.y);
+    if (r.kind === 'diff') {
+      if (dxy < G.xyTol || this.aligning) {                // son hizalama: yerinde dönüş
+        this.aligning = true;
+        const e = wrap(g.th - pose.th);
+        if (Math.abs(e) < G.yawTol && Math.abs(r.w) < 0.05) {
+          this.aligning = false; this.set(ST.GOAL, `ε_xy=${(dxy * 100).toFixed(1)} cm, ε_θ=${(e * DEG).toFixed(2)}°`); return;
+        }
+        const w = Math.sign(e) * clamp(Math.abs(1.5 * e), 0.12, 0.8);
+        r.setCommand(0, w); this.ctrlMode = 'ALIGN'; return;
+      }
+    } else if (dxy < G.xyTolAck) {
+      r.setCommand(0, 0); this.ctrlMode = 'STOP';
+      if (Math.abs(r.v) < 0.02) {
+        const e = wrap(g.th - pose.th);
+        if (Math.abs(e) > 0.2) sim.log('WARN', `Üçteker: hedefte yön hatası ${(e * DEG).toFixed(1)}° (yerinde dönüş kinematik olarak mümkün değil)`);
+        this.set(ST.GOAL, `ε_xy=${(dxy * 100).toFixed(1)} cm, ε_θ=${(e * DEG).toFixed(1)}°`);
+      }
+      return;
+    }
+    // Periyodik / olay tetikli yeniden planlama
+    this.replanT += dt;
+    this.blocked = this.pathBlocked();
+    const hybrid = CFG.planner.mode === 'hybrid' || (CFG.planner.mode === 'auto' && r.kind !== 'diff');
+    const P = sim.planner;
+    if (!P.busy && ((this.blocked && this.replanT > 0.5) || this.replanT > (hybrid ? 3.0 : 1.0))) { this.replanT = 0; P.begin(pose, g, r.kind, CFG.planner.mode); }
+    if (P.busy) {                                          // arka plan yeniden planlaması: robot eski yolu izlemeye devam eder
+      const res = P.step();
+      if (res) {
+        const ok = this.handlePlan(res, false);
+        if (this.state === ST.IDLE) return;
+        if (!ok && this.blocked) { this.set(ST.RECOV, 'yol tıkalı ve yeniden plan yok', 'WARN'); return; }
+        if (ok) this.blocked = this.pathBlocked();
+      }
+    }
+    const out = sim.local.compute(pose, r, this.path, this.pathIdx, g, this.state === ST.AVOID, sim.hits, sim.nHits);
+    this.pathIdx = sim.local.pathIdx;
+    r.setCommand(out.v, out.w); this.ctrlMode = out.mode;
+    const danger = this.blocked || out.mode === 'PF_FALLBACK' || out.minClear < 0.10;
+    if (this.state === ST.TRACK && danger) {
+      this.set(ST.AVOID, this.blocked ? 'yol önü tıkalı' : out.mode === 'PF_FALLBACK' ? 'V_r = ∅ → potansiyel alan' : `açıklık ${(out.minClear * 100).toFixed(0)} cm`, 'WARN');
+    } else if (this.state === ST.AVOID) {
+      if (!danger) { this.avoidClearT += dt; if (this.avoidClearT > 0.8) this.set(ST.TRACK, 'yol temiz'); } else this.avoidClearT = 0;
+    }
+    if (out.mode === 'PF_FALLBACK') { this.pfT += dt; if (this.pfT > 4) { this.set(ST.RECOV, 'kabul edilebilir yörünge yok (4 s)', 'WARN'); return; } }
+    else this.pfT = 0;
+    // İlerleme ölçütü: yol boyunca kalan uzunluk (düz hat mesafesi kapı/dolanma yollarında meşru olarak artabilir)
+    const remain = this.path.len - this.path.cum[this.pathIdx] + Math.hypot(this.path.pts[this.pathIdx].x - pose.x, this.path.pts[this.pathIdx].y - pose.y);
+    if (remain < this.prog.best - (remain < 0.6 ? 0.03 : 0.15)) { this.prog.best = remain; this.prog.t = 0; }
+    else if (out.mode !== 'ROT_SHIM') { this.prog.t += dt; if (this.prog.t > 8) this.set(ST.RECOV, 'ilerleme yok (8 s)', 'WARN'); }
+  }
+  startRecovery() {
+    const sim = this.sim, p = sim.navPose(); this.recoveries++;
+    sim.robot.setCommand(0, 0);
+    if (this.recoveries > 4) { this.rec = { abort: true }; return; }
+    sim.costmap.clearDisk(p.x, p.y, 2.5);
+    sim.log('INFO', `Kurtarma #${this.recoveries}: engel katmanı temizlendi (r = 2.5 m), ${sim.robot.kind === 'diff' ? 'π dönüş' : '0.35 m geri manevra'}`);
+    this.rec = { abort: false, phase: sim.robot.kind === 'diff' ? 'spin' : 'backup', acc: 0, lastTh: p.th, t: 0, dist: 0, lx: p.x, ly: p.y };
+  }
+  recovery(pose, dt) {
+    const rc = this.rec, r = this.sim.robot, cm = this.sim.costmap;
+    if (rc.abort) { r.setCommand(0, 0); this.goal = null; this.path = null; this.set(ST.IDLE, 'kurtarma sınırı (4) aşıldı — görev iptal', 'CRITICAL'); return; }
+    rc.t += dt;
+    if (rc.phase === 'spin') {
+      rc.acc += Math.abs(wrap(pose.th - rc.lastTh)); rc.lastTh = pose.th;
+      if (rc.acc >= Math.PI || rc.t > 8) { r.setCommand(0, 0); if (Math.abs(r.w) < 0.05) this.set(ST.PLAN, 'dönüş tamam'); }
+      else { r.setCommand(0, 1.0); this.ctrlMode = 'SPIN'; }
+    } else {
+      rc.dist += Math.hypot(pose.x - rc.lx, pose.y - rc.ly); rc.lx = pose.x; rc.ly = pose.y;
+      const rear = cm.costAt(pose.x - 0.45 * Math.cos(pose.th), pose.y - 0.45 * Math.sin(pose.th)) < 253;
+      if (rear && rc.dist < 0.35 && rc.t < 6) { r.setCommand(-0.12, 0); this.ctrlMode = 'BACKUP'; }
+      else { r.setCommand(0, 0); if (Math.abs(r.v) < 0.02) this.set(ST.PLAN, 'geri manevra tamam'); }
+    }
+  }
+}
+
+/* ------------------------------- 10. GÜNLÜK & SİMÜLASYON ---------------------------------- */
+class Logger {
+  constructor() { this.entries = []; this.seq = 0; this.counts = { INFO: 0, WARN: 0, CRITICAL: 0 }; }
+  add(t, lvl, msg) {
+    this.counts[lvl]++;
+    const last = this.entries[this.entries.length - 1];
+    if (last && last.lvl === lvl && last.msg === msg && t - last.t < 2) { last.n++; last.t = t; return; }  // tekrar bastırma
+    this.entries.push({ seq: ++this.seq, t, lvl, msg, n: 1, node: null, shown: 0 });
+    if (this.entries.length > 400) this.entries.shift();
+  }
+}
+class Ring {
+  constructor(n) { this.n = n; this.a = new Float32Array(n * 2); this.h = 0; this.c = 0; }
+  push(x, y) { this.a[this.h * 2] = x; this.a[this.h * 2 + 1] = y; this.h = (this.h + 1) % this.n; if (this.c < this.n) this.c++; }
+  idx(i) { return ((this.h - this.c + i) % this.n + this.n) % this.n; }
+}
+
+class Simulation {
+  constructor(logger) { this.logger = logger; this.paused = false; this.speed = 1; this.reset(); }
+  reset() {
+    const s = (CFG.seed >>> 0) || 1;
+    this.world = new World((s * 2654435761) >>> 0); this.world.buildDefault();
+    this.robot = new AMRModel(CFG.kind, new RNG((s * 3 + 11) >>> 0)); this.robot.reset(1.6, 1.6, 0);
+    this.lidar = new Lidar(new RNG((s * 7 + 5) >>> 0));
+    this.costmap = new CostmapEngine(this.world);
+    this.planner = new GlobalPlanner(this.costmap);
+    this.local = new LocalPlanner(this.costmap);
+    this.nav = new Navigator(this);
+    this.t = 0; this.lidarAcc = 0; this.ctrlAcc = 0; this.trailAcc = 0; this.scanCount = 0;
+    this.hits = new Float32Array(2 * 720); this.nHits = 0;
+    this.trail = new Ring(3000); this.odoTrail = new Ring(3000);
+    this.hist = { v: new Float32Array(150), w: new Float32Array(150), h: 0, c: 0 };
+    this.metrics = { plan: 0, planSlice: 0, planSlices: 0, dwa: 0, ray: 0, cmap: 0, render: 0, step: 0, frame: 0, fps: 0, steps: 0 };
+    this.collisions = 0;
+    this.log('INFO', `Sistem başlatıldı · tohum=${s} · harita ${this.world.W}×${this.world.H} @ ${this.world.res.toFixed(2)} m · kinematik=${CFG.kind}`);
+    this.log('INFO', `LIDAR ${this.lidar.n} ışın @ ${CFG.lidar.hz} Hz, menzil ${CFG.lidar.rMin}–${CFG.lidar.rMax} m · kontrolcü ${CFG.dwa.hz} Hz · fizik ${1 / CFG.phys.dt} Hz`);
+    this.nav.setGoal({ x: 21.3, y: 4.5, th: -Math.PI / 2 });
+    this.log('INFO', 'Demo görevi kuyruğa alındı (kalibrasyon sonrası yürütülecek)');
+  }
+  log(l, m) { this.logger.add(this.t, l, m); }
+  navPose() { return CFG.poseSource === 'odom' ? this.robot.odo : this.robot; }
+  toggleEstop() {
+    const r = this.robot; r.estop = !r.estop;
+    if (r.estop) this.log('CRITICAL', `ACİL DURDURMA etkin — komutlar kilitlendi, yavaşlama ${CFG.robot.aEstop} m/s²`);
+    else {
+      this.log('WARN', 'Acil durdurma serbest bırakıldı');
+      if ([ST.TRACK, ST.AVOID, ST.RECOV].includes(this.nav.state)) this.nav.set(ST.PLAN, 'E-stop sonrası yeniden plan');
+    }
+  }
+  setKind(k) {
+    CFG.kind = k; this.robot.setKind(k);
+    this.log('INFO', `Kinematik modeli: ${k === 'diff' ? 'diferansiyel' : 'üçteker/bisiklet (δ_max=' + (CFG.robot.steerMax * DEG).toFixed(0) + '°, L_wb=' + CFG.robot.wheelbase + ' m)'}`);
+    if ([ST.TRACK, ST.AVOID, ST.RECOV].includes(this.nav.state)) this.nav.set(ST.PLAN, 'kinematik değişti');
+  }
+  /** Sabit adım Δt. Çok hızlı (fizik) ve çok hızlı-olmayan (sensör/kontrol) döngüler akümülatörlerle çoklanır. */
+  step(dt) {
+    this.t += dt;
+    this.world.updateAgents(dt, this.robot);
+    const wasColl = this.robot.collided;
+    this.robot.step(dt, this.world);
+    if (this.robot.collided && !wasColl) {
+      this.collisions++;
+      const wall = this.world.penetration(this.robot.x, this.robot.y, CFG.robot.radius + 0.02, false) > 0;
+      this.log('CRITICAL', `Fiziksel temas (${wall ? 'statik duvar' : 'dinamik engel'}) @ (${this.robot.x.toFixed(2)}, ${this.robot.y.toFixed(2)})`);
+    }
+    const lp = 1 / CFG.lidar.hz; this.lidarAcc += dt;
+    if (this.lidarAcc >= lp - 1e-9) { this.lidarAcc -= lp; this.doScan(); }
+    const cp = 1 / CFG.dwa.hz; this.ctrlAcc += dt;
+    if (this.ctrlAcc >= cp - 1e-9) {
+      this.ctrlAcc -= cp; this.nav.tick(cp);
+      if (this.local.ms) this.metrics.dwa = ema(this.metrics.dwa, this.local.ms, 0.2);
+    }
+    this.trailAcc += dt;
+    if (this.trailAcc >= 0.1 - 1e-9) {
+      this.trailAcc -= 0.1;
+      this.trail.push(this.robot.x, this.robot.y); this.odoTrail.push(this.robot.odo.x, this.robot.odo.y);
+      const H = this.hist; H.v[H.h] = this.robot.v; H.w[H.h] = this.robot.w; H.h = (H.h + 1) % 150; if (H.c < 150) H.c++;
+    }
+  }
+  doScan() {
+    const t0 = nowMs(); this.lidar.scan(this.world, this.robot);
+    const t1 = nowMs(), np = this.navPose(); this.costmap.update(this.lidar, np);
+    const t2 = nowMs();
+    this.metrics.ray = ema(this.metrics.ray, t1 - t0, 0.2); this.metrics.cmap = ema(this.metrics.cmap, t2 - t1, 0.2);
+    const L = this.lidar; let m = 0;
+    for (let k = 0; k < L.n; k++) if (L.flag[k] === 1) { const a = np.th + k * L.dA, r = L.ranges[k]; this.hits[m++] = np.x + r * Math.cos(a); this.hits[m++] = np.y + r * Math.sin(a); }
+    this.nHits = m / 2; this.scanCount++;
+  }
+}
+
+// @@UI_BEGIN ================================================================================
+/* ------------------------------- 11. GÖRÜNÜM ALANI (VIEWPORT) ----------------------------- */
+const packRGBA = (r, g, b, a) => (((a & 255) << 24) | ((b & 255) << 16) | ((g & 255) << 8) | (r & 255)) >>> 0; // küçük-endian ImageData
+class Viewport {
+  constructor(canvas, sim) {
+    this.cv = canvas; this.ctx = canvas.getContext('2d', { alpha: false }); this.sim = sim;
+    this.s = 40; this.ox = 0; this.oy = 0; this.dpr = 1; this.cssW = 1; this.cssH = 1; this.fitted = false;
+    this.layers = { grid: true, heat: true, rays: true, path: true, dwa: true, trail: true, odom: true };
+    this.tool = 'goal'; this.drag = null; this.pan = null; this.mouse = { x: 0, y: 0, in: false };
+    this.costCv = document.createElement('canvas'); this.wallCv = document.createElement('canvas');
+    this.lut = this.buildLUT(); this.cmRef = null; this.cmVer = -1; this.wRef = null; this.wVer = -1;
+    this.renderMs = 0; this.onGoal = null; this.bind();
+  }
+  buildLUT() {
+    const lut = new Uint32Array(256);
+    for (let c = 1; c <= 252; c++) {
+      const t = c / 252; let r, g, b, a;
+      if (t < 0.5) { const u = t / 0.5; r = 0; g = 70 + u * 159; b = 90 + u * 165; a = 30 + u * 70; }
+      else { const u = (t - 0.5) / 0.5; r = u * 255; g = 229 - u * 53; b = 255 - u * 255; a = 100 + u * 60; }
+      lut[c] = packRGBA(r, g, b, a);
+    }
+    lut[253] = packRGBA(255, 79, 216, 105); lut[254] = packRGBA(255, 64, 48, 235); return lut;
+  }
+  resize() {
+    const p = this.cv.parentElement.getBoundingClientRect();
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2); this.cssW = Math.max(1, p.width); this.cssH = Math.max(1, p.height);
+    this.cv.width = Math.round(this.cssW * this.dpr); this.cv.height = Math.round(this.cssH * this.dpr);
+    if (!this.fitted) this.fit();
+  }
+  fit() {
+    // Üstte HUD satırı (≈40 px), altta FSM paneli (≈150 px) için yer ayrılır; harita kalan alana ortalanır.
+    const w = this.sim.world, m = 24, top = 44, bottom = this.cssH > 520 ? 156 : 24;
+    this.s = Math.max(4, Math.min((this.cssW - 2 * m) / w.Wm, (this.cssH - top - bottom) / w.Hm));
+    this.ox = (this.cssW - w.Wm * this.s) / 2;
+    this.oy = top + ((this.cssH - top - bottom) - w.Hm * this.s) / 2 + w.Hm * this.s; this.fitted = true;
+  }
+  toWorld(px, py) { return { x: (px - this.ox) / this.s, y: (this.oy - py) / this.s }; }
+  bind() {
+    const cv = this.cv;
+    cv.addEventListener('contextmenu', e => e.preventDefault());
+    cv.addEventListener('pointerdown', e => {
+      cv.setPointerCapture(e.pointerId);
+      const w = this.toWorld(e.offsetX, e.offsetY), sim = this.sim;
+      if (e.button === 1 || e.button === 2) { this.pan = { x: e.offsetX, y: e.offsetY }; return; }
+      if (e.button !== 0) return;
+      if (this.tool === 'goal' || this.tool === 'wall') this.drag = { type: this.tool, x0: w.x, y0: w.y, x1: w.x, y1: w.y };
+      else if (this.tool === 'erase') { this.drag = { type: 'erase' }; this.erase(w); }
+      else if (this.tool === 'agent') {
+        const r = sim.robot;
+        if (sim.world.penetration(w.x, w.y, 0.3, true) > 0 || Math.hypot(w.x - r.x, w.y - r.y) < r.radius + 0.6) sim.log('WARN', 'Dinamik engel yerleştirilemedi: alan dolu veya robota çok yakın');
+        else { sim.world.addAgent(w.x, w.y); sim.log('INFO', `Dinamik engel eklendi (${w.x.toFixed(2)}, ${w.y.toFixed(2)}), toplam ${sim.world.agents.length}`); }
+      }
+    });
+    cv.addEventListener('pointermove', e => {
+      this.mouse.x = e.offsetX; this.mouse.y = e.offsetY; this.mouse.in = true;
+      if (this.pan) { this.ox += e.offsetX - this.pan.x; this.oy += e.offsetY - this.pan.y; this.pan.x = e.offsetX; this.pan.y = e.offsetY; return; }
+      const w = this.toWorld(e.offsetX, e.offsetY);
+      if (this.drag) { if (this.drag.type === 'erase') this.erase(w); else { this.drag.x1 = w.x; this.drag.y1 = w.y; } }
+    });
+    cv.addEventListener('pointerleave', () => { this.mouse.in = false; });
+    const end = e => {
+      if (this.pan) { this.pan = null; return; }
+      const d = this.drag; this.drag = null; if (!d) return;
+      const sim = this.sim;
+      if (d.type === 'goal') {
+        const L = Math.hypot(d.x1 - d.x0, d.y1 - d.y0), r = sim.navPose();
+        const th = L > 0.15 ? Math.atan2(d.y1 - d.y0, d.x1 - d.x0) : Math.atan2(d.y0 - r.y, d.x0 - r.x);
+        sim.nav.setGoal({ x: d.x0, y: d.y0, th });
+      } else if (d.type === 'wall') {
+        const L = Math.hypot(d.x1 - d.x0, d.y1 - d.y0);
+        const n = L < 0.05 ? sim.world.paintSegment(d.x0, d.y0, d.x0, d.y0, 0.3, sim.robot) : sim.world.paintSegment(d.x0, d.y0, d.x1, d.y1, 0.2, sim.robot);
+        const t0 = nowMs(); sim.costmap.syncStatic();
+        sim.log('INFO', `Statik duvar: ${n} hücre (${(Math.max(L, 0.3)).toFixed(2)} m) · statik şişirme ${(nowMs() - t0).toFixed(1)} ms`);
+      } else if (d.type === 'erase') { const t0 = nowMs(); sim.costmap.syncStatic(); sim.log('INFO', `Silgi uygulandı · statik katman yeniden şişirildi (${(nowMs() - t0).toFixed(1)} ms)`); }
+    };
+    cv.addEventListener('pointerup', end); cv.addEventListener('pointercancel', end);
+    cv.addEventListener('wheel', e => {
+      e.preventDefault();
+      const f = Math.exp(-e.deltaY * 0.0015), ns = clamp(this.s * f, 6, 400), k = ns / this.s;
+      this.ox = e.offsetX - (e.offsetX - this.ox) * k; this.oy = e.offsetY - (e.offsetY - this.oy) * k; this.s = ns;
+    }, { passive: false });
+  }
+  erase(w) { const sim = this.sim, n = sim.world.eraseDisk(w.x, w.y, 0.4); sim.costmap.clearDisk(w.x, w.y, 0.4); if (n) sim.log('INFO', `${n} dinamik engel silindi`); }
+
+  syncCost() {
+    const cm = this.sim.costmap;
+    if (cm === this.cmRef && cm.version === this.cmVer) return;
+    if (this.costCv.width !== cm.W || this.costCv.height !== cm.H) { this.costCv.width = cm.W; this.costCv.height = cm.H; this.costImg = null; }
+    const cx = this.costCv.getContext('2d');
+    if (!this.costImg) { this.costImg = cx.createImageData(cm.W, cm.H); this.cost32 = new Uint32Array(this.costImg.data.buffer); }
+    const M = cm.master, S = cm.stat, out = this.cost32, lut = this.lut;
+    for (let i = 0; i < cm.N; i++) out[i] = S[i] ? 0 : lut[M[i]];
+    cx.putImageData(this.costImg, 0, 0); this.cmRef = cm; this.cmVer = cm.version;
+  }
+  syncWalls() {
+    const w = this.sim.world;
+    if (w === this.wRef && w.version === this.wVer) return;
+    if (this.wallCv.width !== w.W || this.wallCv.height !== w.H) { this.wallCv.width = w.W; this.wallCv.height = w.H; this.wallImg = null; }
+    const cx = this.wallCv.getContext('2d');
+    if (!this.wallImg) { this.wallImg = cx.createImageData(w.W, w.H); this.wall32 = new Uint32Array(this.wallImg.data.buffer); }
+    const o = w.occ, W = w.W, H = w.H, out = this.wall32, edge = packRGBA(95, 230, 140, 255), fill = packRGBA(20, 66, 40, 255);
+    for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
+      const id = j * W + i;
+      if (!o[id]) { out[id] = 0; continue; }
+      const e = (i > 0 && !o[id - 1]) || (i < W - 1 && !o[id + 1]) || (j > 0 && !o[id - W]) || (j < H - 1 && !o[id + W]);
+      out[id] = e ? edge : fill;
+    }
+    cx.putImageData(this.wallImg, 0, 0); this.wRef = w; this.wVer = w.version;
+  }
+  render() {
+    const t0 = nowMs(), sim = this.sim, w = sim.world, ctx = this.ctx, dpr = this.dpr, L = this.layers;
+    ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.fillStyle = '#000'; ctx.fillRect(0, 0, this.cv.width, this.cv.height);
+    const S = this.s * dpr; ctx.setTransform(S, 0, 0, -S, this.ox * dpr, this.oy * dpr);   // dünya çerçevesi (y yukarı)
+    const px = 1 / this.s;
+    ctx.fillStyle = '#010503'; ctx.fillRect(0, 0, w.Wm, w.Hm);
+    if (L.grid) this.drawGrid(px);
+    ctx.imageSmoothingEnabled = false;
+    if (L.heat) { this.syncCost(); ctx.drawImage(this.costCv, 0, 0, w.Wm, w.Hm); }
+    this.syncWalls(); ctx.drawImage(this.wallCv, 0, 0, w.Wm, w.Hm);
+    if (L.trail) this.drawTrails(px);
+    if (L.rays) this.drawRays(px);
+    if (L.path) this.drawPath(px);
+    if (L.dwa) this.drawDWA(px);
+    this.drawAgents(px); this.drawGoal(px);
+    if (L.odom) this.drawOdom(px);
+    this.drawRobot(px); this.drawPreview(px);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); this.drawOverlay();
+    this.renderMs = nowMs() - t0;
+  }
+  visible() {
+    const w = this.sim.world;
+    return { x0: Math.max(0, -this.ox / this.s), x1: Math.min(w.Wm, (this.cssW - this.ox) / this.s), y0: Math.max(0, (this.oy - this.cssH) / this.s), y1: Math.min(w.Hm, this.oy / this.s) };
+  }
+  drawGrid(px) {
+    const ctx = this.ctx, v = this.visible(), step = this.s > 90 ? 0.5 : 1;
+    ctx.lineWidth = px; ctx.strokeStyle = '#0a1d12'; ctx.beginPath();
+    for (let x = Math.ceil(v.x0 / step) * step; x <= v.x1; x += step) { ctx.moveTo(x, v.y0); ctx.lineTo(x, v.y1); }
+    for (let y = Math.ceil(v.y0 / step) * step; y <= v.y1; y += step) { ctx.moveTo(v.x0, y); ctx.lineTo(v.x1, y); }
+    ctx.stroke();
+    ctx.strokeStyle = '#123a22'; ctx.beginPath();
+    for (let x = Math.ceil(v.x0 / 5) * 5; x <= v.x1; x += 5) { ctx.moveTo(x, v.y0); ctx.lineTo(x, v.y1); }
+    for (let y = Math.ceil(v.y0 / 5) * 5; y <= v.y1; y += 5) { ctx.moveTo(v.x0, y); ctx.lineTo(v.x1, y); }
+    ctx.stroke();
+  }
+  ringPath(r) {
+    const ctx = this.ctx, a = r.a; if (r.c < 2) return;
+    ctx.beginPath(); let k = r.idx(0); ctx.moveTo(a[k * 2], a[k * 2 + 1]);
+    for (let i = 1; i < r.c; i++) { k = r.idx(i); ctx.lineTo(a[k * 2], a[k * 2 + 1]); }
+    ctx.stroke();
+  }
+  drawTrails(px) {
+    const ctx = this.ctx;
+    ctx.lineWidth = 1.5 * px; ctx.strokeStyle = 'rgba(57,255,122,0.55)'; this.ringPath(this.sim.trail);
+    if (this.layers.odom) { ctx.setLineDash([4 * px, 4 * px]); ctx.strokeStyle = 'rgba(255,176,0,0.55)'; this.ringPath(this.sim.odoTrail); ctx.setLineDash([]); }
+  }
+  drawRays(px) {
+    const ctx = this.ctx, L = this.sim.lidar, p = L.pose, n = L.n, stride = Math.max(1, Math.ceil(n / 360));
+    ctx.lineWidth = px; ctx.strokeStyle = 'rgba(0,229,255,0.10)'; ctx.beginPath();
+    for (let k = 0; k < n; k += stride) {
+      if (L.flag[k] === 0) continue;
+      const a = p.th + k * L.dA, r = L.ranges[k];
+      ctx.moveTo(p.x, p.y); ctx.lineTo(p.x + r * Math.cos(a), p.y + r * Math.sin(a));
+    }
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(0,229,255,0.95)'; const sz = 2.2 * px;
+    for (let k = 0; k < n; k++) {
+      if (L.flag[k] !== 1) continue;
+      const a = p.th + k * L.dA, r = L.ranges[k];
+      ctx.fillRect(p.x + r * Math.cos(a) - sz / 2, p.y + r * Math.sin(a) - sz / 2, sz, sz);
+    }
+  }
+  drawPath(px) {
+    const nav = this.sim.nav, P = nav.path; if (!P || !nav.goal) return;
+    const ctx = this.ctx, pts = P.pts;
+    ctx.lineWidth = 2 * px; ctx.strokeStyle = nav.blocked ? 'rgba(255,176,0,0.9)' : 'rgba(0,229,255,0.85)';
+    ctx.beginPath(); ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.stroke();
+    if (nav.state === ST.TRACK || nav.state === ST.AVOID) {
+      const c = this.sim.local.carrot; ctx.strokeStyle = '#ffb000'; ctx.lineWidth = 1.5 * px;
+      ctx.beginPath(); ctx.arc(c.x, c.y, 5 * px, 0, TAU); ctx.stroke();
+    }
+  }
+  drawDWA(px) {
+    const sim = this.sim, lp = sim.local, st = sim.nav.state;
+    if (!(st === ST.TRACK || st === ST.AVOID) || lp.count === 0) return;
+    const ctx = this.ctx, buf = lp.buf, MP2 = lp.MP * 2;
+    let mn = Infinity, mx = -Infinity;
+    for (let i = 0; i < lp.count; i++) if (lp.adm[i]) { mn = Math.min(mn, lp.sc[i]); mx = Math.max(mx, lp.sc[i]); }
+    const span = mx - mn || 1, styles = ['rgba(255,51,85,0.22)', 'rgba(57,255,122,0.10)', 'rgba(57,255,122,0.22)', 'rgba(57,255,122,0.45)'];
+    ctx.lineWidth = px;
+    for (let bkt = 0; bkt < 4; bkt++) {
+      ctx.strokeStyle = styles[bkt]; ctx.beginPath();
+      for (let i = 0; i < lp.count; i++) {
+        if (i === lp.best || lp.np[i] < 2) continue;
+        const b = lp.adm[i] ? 1 + Math.min(2, Math.floor(3 * (lp.sc[i] - mn) / span)) : 0;
+        if (b !== bkt) continue;
+        const o = i * MP2; ctx.moveTo(buf[o], buf[o + 1]);
+        for (let k = 1; k < lp.np[i]; k++) ctx.lineTo(buf[o + 2 * k], buf[o + 2 * k + 1]);
+      }
+      ctx.stroke();
+    }
+    if (lp.best >= 0 && lp.np[lp.best] >= 2) {
+      const o = lp.best * MP2; ctx.strokeStyle = '#ffb000'; ctx.lineWidth = 2.5 * px; ctx.beginPath(); ctx.moveTo(buf[o], buf[o + 1]);
+      for (let k = 1; k < lp.np[lp.best]; k++) ctx.lineTo(buf[o + 2 * k], buf[o + 2 * k + 1]);
+      ctx.stroke();
+    }
+  }
+  drawAgents(px) {
+    const ctx = this.ctx;
+    for (const a of this.sim.world.agents) {
+      ctx.fillStyle = 'rgba(255,79,216,0.28)'; ctx.strokeStyle = '#ff4fd8'; ctx.lineWidth = 1.5 * px;
+      ctx.beginPath(); ctx.arc(a.x, a.y, a.r, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(a.x + a.vx * 0.8, a.y + a.vy * 0.8); ctx.stroke();
+    }
+  }
+  arrow(x, y, th, len, px, color, dash) {
+    const ctx = this.ctx, ex = x + len * Math.cos(th), ey = y + len * Math.sin(th), h = 0.16;
+    ctx.strokeStyle = color; ctx.lineWidth = 2 * px; if (dash) ctx.setLineDash([5 * px, 4 * px]);
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(ex, ey); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex - h * Math.cos(th - 0.45), ey - h * Math.sin(th - 0.45));
+    ctx.moveTo(ex, ey); ctx.lineTo(ex - h * Math.cos(th + 0.45), ey - h * Math.sin(th + 0.45)); ctx.stroke();
+  }
+  drawGoal(px) {
+    const nav = this.sim.nav, g = nav.goal; if (!g) return;
+    const ctx = this.ctx, tol = this.sim.robot.kind === 'diff' ? CFG.goal.xyTol : CFG.goal.xyTolAck;
+    const col = nav.state === ST.GOAL ? '#00e5ff' : '#ffb000';
+    ctx.strokeStyle = col; ctx.lineWidth = 1.5 * px; ctx.setLineDash([3 * px, 3 * px]);
+    ctx.beginPath(); ctx.arc(g.x, g.y, tol, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.arc(g.x, g.y, 0.05, 0, TAU); ctx.stroke();
+    this.arrow(g.x, g.y, g.th, 0.6, px, col, false);
+  }
+  drawOdom(px) {
+    const o = this.sim.robot.odo, r = this.sim.robot, ctx = this.ctx;
+    ctx.strokeStyle = 'rgba(255,176,0,0.9)'; ctx.lineWidth = 1.2 * px; ctx.setLineDash([4 * px, 3 * px]);
+    ctx.beginPath(); ctx.arc(o.x, o.y, CFG.robot.radius, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.beginPath(); ctx.moveTo(o.x, o.y); ctx.lineTo(o.x + 0.4 * Math.cos(o.th), o.y + 0.4 * Math.sin(o.th)); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,176,0,0.5)'; ctx.beginPath(); ctx.moveTo(r.x, r.y); ctx.lineTo(o.x, o.y); ctx.stroke();
+  }
+  drawRobot(px) {
+    const r = this.sim.robot, R = CFG.robot, ctx = this.ctx;
+    const col = r.estop ? '#ff3355' : r.collided ? '#ff3355' : '#39ff7a';
+    ctx.save(); ctx.translate(r.x, r.y); ctx.rotate(r.th);
+    ctx.setLineDash([4 * px, 3 * px]); ctx.strokeStyle = 'rgba(0,229,255,0.75)'; ctx.lineWidth = px;
+    ctx.beginPath(); ctx.arc(0, 0, R.radius, 0, TAU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle = 'rgba(57,255,122,0.16)'; ctx.strokeStyle = col; ctx.lineWidth = 1.6 * px;
+    if (r.kind === 'diff') {
+      ctx.beginPath(); ctx.arc(0, 0, 0.27, 0, TAU); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = col; ctx.fillRect(-0.08, R.track / 2 - 0.035, 0.16, 0.05); ctx.fillRect(-0.08, -R.track / 2 - 0.015, 0.16, 0.05);
+      ctx.beginPath(); ctx.arc(-0.19, 0, 0.03, 0, TAU); ctx.stroke();
+    } else {
+      ctx.beginPath(); ctx.rect(-0.2, -0.19, 0.42, 0.38); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = col; ctx.fillRect(-0.06, 0.15, 0.12, 0.05); ctx.fillRect(-0.06, -0.2, 0.12, 0.05);
+      ctx.save(); ctx.translate(R.wheelbase, 0); ctx.rotate(r.delta); ctx.fillRect(-0.055, -0.025, 0.11, 0.05); ctx.restore();
+    }
+    ctx.strokeStyle = col; ctx.lineWidth = 2 * px; ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(0.42, 0); ctx.stroke();
+    ctx.restore();
+    if (r.estop) { ctx.strokeStyle = 'rgba(255,51,85,' + (0.4 + 0.4 * Math.sin(nowMs() / 120)) + ')'; ctx.lineWidth = 3 * px; ctx.beginPath(); ctx.arc(r.x, r.y, R.radius + 0.12, 0, TAU); ctx.stroke(); }
+  }
+  drawPreview(px) {
+    const d = this.drag, ctx = this.ctx;
+    if (d && d.type === 'goal') {
+      const L = Math.hypot(d.x1 - d.x0, d.y1 - d.y0);
+      const th = L > 0.15 ? Math.atan2(d.y1 - d.y0, d.x1 - d.x0) : 0;
+      ctx.strokeStyle = '#00e5ff'; ctx.lineWidth = 1.5 * px; ctx.beginPath(); ctx.arc(d.x0, d.y0, 0.15, 0, TAU); ctx.stroke();
+      if (L > 0.15) this.arrow(d.x0, d.y0, th, Math.max(0.6, L), px, '#00e5ff', true);
+    } else if (d && d.type === 'wall') {
+      ctx.strokeStyle = 'rgba(255,176,0,0.55)'; ctx.lineWidth = 0.2; ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(d.x0, d.y0); ctx.lineTo(d.x1, d.y1); ctx.stroke(); ctx.lineCap = 'butt';
+    }
+    if (this.tool === 'erase' && this.mouse.in) {
+      const w = this.toWorld(this.mouse.x, this.mouse.y);
+      ctx.strokeStyle = 'rgba(255,51,85,0.8)'; ctx.lineWidth = px; ctx.beginPath(); ctx.arc(w.x, w.y, 0.4, 0, TAU); ctx.stroke();
+    }
+  }
+  drawOverlay() {
+    const ctx = this.ctx, w = this.sim.world, v = this.visible();
+    ctx.font = '10px ui-monospace,Consolas,monospace'; ctx.fillStyle = '#3f6a50'; ctx.textBaseline = 'top';
+    const st = this.s > 60 ? 1 : 5;
+    for (let x = Math.ceil(v.x0 / st) * st; x <= v.x1 + 1e-6; x += st) { const sx = this.ox + x * this.s; ctx.fillText(x + '', sx + 2, Math.min(this.cssH - 12, this.oy + 3)); }
+    ctx.textBaseline = 'middle';
+    for (let y = Math.ceil(v.y0 / st) * st; y <= v.y1 + 1e-6; y += st) { const sy = this.oy - y * this.s; ctx.fillText(y + '', Math.max(2, this.ox - 18), sy); }
+    // ölçek çubuğu
+    const bar = this.s >= 40 ? 1 : 5, bx = this.cssW - 30 - bar * this.s, by = this.cssH - 18;
+    ctx.strokeStyle = '#39ff7a'; ctx.lineWidth = 1.5; ctx.beginPath(); ctx.moveTo(bx, by - 4); ctx.lineTo(bx, by); ctx.lineTo(bx + bar * this.s, by); ctx.lineTo(bx + bar * this.s, by - 4); ctx.stroke();
+    ctx.fillStyle = '#39ff7a'; ctx.textBaseline = 'bottom'; ctx.fillText(bar + ' m', bx + bar * this.s / 2 - 8, by - 4);
+    if (this.sim.paused) { ctx.fillStyle = '#ffb000'; ctx.font = '12px ui-monospace,Consolas,monospace'; ctx.textBaseline = 'top'; ctx.fillText('■ DURAKLATILDI', this.cssW / 2 - 50, 36); }
+    void w;
+  }
+}
+
+/* ------------------------------- 12. HUD / TELEMETRİ -------------------------------------- */
+function fitCanvas(cv, cssH) {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2), w = Math.max(1, cv.clientWidth);
+  cv.style.height = cssH + 'px'; cv.width = Math.round(w * dpr); cv.height = Math.round(cssH * dpr);
+  const ctx = cv.getContext('2d'); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); return { ctx, w, h: cssH };
+}
+const FSM_NODES = {
+  [ST.BOOT]: [0, 0], [ST.IDLE]: [1, 0], [ST.PLAN]: [2, 0], [ST.TRACK]: [3, 0], [ST.GOAL]: [4, 0], [ST.RECOV]: [2, 1], [ST.AVOID]: [3, 1],
+};
+const FSM_EDGES = [
+  [ST.BOOT, ST.IDLE], [ST.BOOT, ST.PLAN, 'arcB'], [ST.IDLE, ST.PLAN], [ST.PLAN, ST.IDLE], [ST.PLAN, ST.TRACK], [ST.TRACK, ST.GOAL],
+  [ST.TRACK, ST.AVOID], [ST.AVOID, ST.TRACK], [ST.AVOID, ST.RECOV], [ST.TRACK, ST.RECOV], [ST.RECOV, ST.PLAN],
+  [ST.PLAN, ST.RECOV], [ST.AVOID, ST.GOAL], [ST.GOAL, ST.PLAN, 'arc'], [ST.RECOV, ST.IDLE],
+];
+class HUD {
+  constructor(sim, view) {
+    this.sim = sim; this.view = view;
+    const $ = id => document.getElementById(id); this.$ = $;
+    this.kin = this.table($('tmKin'), [['v', 'v [m/s]'], ['w', 'ω [rad/s]'], ['a', 'v̇ [m/s²]'], ['wh', 'v_R / v_L [m/s]'], ['pose', 'Poz gerçek [m, °]'],
+      ['odo', 'Poz odometri [m, °]'], ['err', 'Odometri hatası'], ['dist', 'Kat edilen yol [m]'], ['ctrl', 'Kontrol / DWA'], ['plan', 'Son plan'], ['cmap', 'Engel hücresi / temas']], false);
+    this.lat = this.table($('tmLat'), [['plan', 'Küresel plan (son, toplam)'], ['dwa', 'DWA döngüsü'], ['ray', 'Işın izleme'], ['cmap', 'Maliyet hrt. güncelleme'],
+      ['step', 'Sim adımları / kare'], ['render', 'Çizim'], ['frame', 'Kare toplamı (CPU)'], ['fps', 'FPS']], true);
+    this.radar = $('radar'); this.spark = $('spark'); this.fsm = $('fsm'); this.logEl = $('log');
+    this.resize();
+  }
+  table(el, rows, bars) {
+    const m = {};
+    for (const [k, label] of rows) {
+      const tr = document.createElement('tr'); tr.innerHTML = `<td>${label}</td><td class="v">—</td>`; el.appendChild(tr); m[k] = tr.children[1];
+      if (bars && k !== 'fps' && k !== 'step') { const t2 = document.createElement('tr'); t2.innerHTML = '<td colspan="2" style="padding:0"><div class="bar"><i></i></div></td>'; el.appendChild(t2); m[k + '_b'] = t2.querySelector('i'); }
+    }
+    return m;
+  }
+  resize() {
+    const rw = this.radar.clientWidth || 290;
+    this.rc = fitCanvas(this.radar, Math.round(Math.min(rw * 0.78, 240)));
+    this.sc = fitCanvas(this.spark, 72);
+    this.fsm.style.width = '558px'; this.fc = fitCanvas(this.fsm, 104);
+  }
+  bar(el, ms) { if (!el) return; el.style.width = Math.min(100, ms / 16.7 * 100).toFixed(1) + '%'; el.className = ms > 16.7 ? 'c' : ms > 8 ? 'w' : ''; }
+  update() {
+    const s = this.sim, r = s.robot, o = r.odo, nav = s.nav, M = s.metrics, K = this.kin, L = this.lat, $ = this.$;
+    K.v.textContent = r.v.toFixed(3); K.w.textContent = r.w.toFixed(3); K.a.textContent = r.acc.toFixed(2);
+    K.wh.textContent = r.kind === 'diff' ? `${r.wR.toFixed(3)} / ${r.wL.toFixed(3)}` : `δ=${(r.delta * DEG).toFixed(1)}° v_f=${r.vFront.toFixed(2)}`;
+    K.pose.textContent = `${r.x.toFixed(2)}, ${r.y.toFixed(2)}, ${(r.th * DEG).toFixed(1)}`;
+    K.odo.textContent = `${o.x.toFixed(2)}, ${o.y.toFixed(2)}, ${(o.th * DEG).toFixed(1)}`;
+    K.err.textContent = `Δp ${Math.hypot(r.x - o.x, r.y - o.y).toFixed(3)} m · Δθ ${(wrap(r.th - o.th) * DEG).toFixed(2)}°`;
+    K.dist.textContent = r.dist.toFixed(2);
+    const dwaOn = (nav.state === ST.TRACK || nav.state === ST.AVOID) && s.local.count;
+    K.ctrl.textContent = `${nav.ctrlMode}${dwaOn ? ` · ${s.local.out.nAdm}/${s.local.count} kabul` : ''}`;
+    const ps = s.planner.stats; K.plan.textContent = ps.len ? `${ps.algo.split(' ')[0] === 'Hibrit' ? 'HA*' : 'A*'} ${ps.len.toFixed(1)} m · ${ps.exp} gen.` : '—';
+    K.cmap.textContent = `${s.costmap.nObst} / ${s.collisions}`;
+    L.plan.textContent = `${M.plan.toFixed(2)} ms · ${M.planSlices} dilim (maks ${M.planSlice.toFixed(1)})`; this.bar(L.plan_b, M.planSlice);
+    L.dwa.textContent = M.dwa.toFixed(3) + ' ms'; this.bar(L.dwa_b, M.dwa);
+    L.ray.textContent = M.ray.toFixed(3) + ' ms'; this.bar(L.ray_b, M.ray);
+    L.cmap.textContent = M.cmap.toFixed(3) + ' ms'; this.bar(L.cmap_b, M.cmap);
+    L.step.textContent = `${M.steps} · ${M.step.toFixed(2)} ms`;
+    L.render.textContent = M.render.toFixed(2) + ' ms'; this.bar(L.render_b, M.render);
+    L.frame.textContent = M.frame.toFixed(2) + ' ms'; this.bar(L.frame_b, M.frame);
+    L.fps.textContent = M.fps.toFixed(1);
+    const hs = $('hdrState'); hs.textContent = nav.state;
+    hs.style.color = nav.state === ST.AVOID ? 'var(--am)' : nav.state === ST.RECOV ? 'var(--rd)' : nav.state === ST.GOAL ? 'var(--cy)' : 'var(--g)';
+    $('hdrTime').textContent = s.t.toFixed(3) + ' s'; $('hdrFps').textContent = M.fps.toFixed(0);
+    $('hdrGoal').textContent = nav.goal ? `${nav.goal.x.toFixed(2)}, ${nav.goal.y.toFixed(2)}, ${(nav.goal.th * DEG).toFixed(0)}° · ${Math.hypot(nav.goal.x - s.navPose().x, nav.goal.y - s.navPose().y).toFixed(2)} m` : '—';
+    $('hudCtrl').textContent = nav.ctrlMode; $('hudKin').textContent = r.kind === 'diff' ? 'DIFF' : 'TRICYCLE'; $('hudPose').textContent = CFG.poseSource === 'odom' ? 'ODOM' : 'GT';
+    $('btnEstop').classList.toggle('active', r.estop); $('btnEstop').textContent = r.estop ? 'E-STOP ETKİN · SERBEST BIRAK' : 'ACİL DURDURMA';
+    $('fsmInfo').textContent = `t_durum ${nav.tState.toFixed(1)} s · kurtarma ${nav.recoveries}`;
+    $('radarInfo').textContent = `${s.lidar.n} ışın · ${s.lidar.hits} isabet`;
+    this.drawSpark(); this.flushLog();
+  }
+  flushLog() {
+    const lg = this.sim.logger, el = this.logEl, atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 30;
+    for (const e of lg.entries) {
+      if (!e.node) {
+        const d = document.createElement('div'); d.className = 'll';
+        d.innerHTML = `<span class="ts">[T+${e.t.toFixed(3).padStart(8, '0')}]</span> <span class="${e.lvl}">${e.lvl === 'CRITICAL' ? 'CRIT' : e.lvl.padEnd(4, ' ')}</span> <span class="m"></span><span class="n"></span>`;
+        d.querySelector('.m').textContent = e.msg; el.appendChild(d); e.node = d;
+      }
+      if (e.n !== e.shown) { e.node.querySelector('.n').textContent = e.n > 1 ? '×' + e.n : ''; e.shown = e.n; }
+    }
+    while (el.childElementCount > 400) el.removeChild(el.firstChild);
+    if (atBottom) el.scrollTop = el.scrollHeight;
+    const c = lg.counts; this.$('logCounts').innerHTML = `<span style="color:var(--g)">${c.INFO}</span> · <span style="color:var(--am)">${c.WARN}</span> · <span style="color:var(--rd)">${c.CRITICAL}</span>`;
+  }
+  drawRadar() {
+    const { ctx, w, h } = this.rc, L = this.sim.lidar, cx = w / 2, cy = h / 2, R = Math.min(w, h) / 2 - 8, k = R / CFG.lidar.rMax;
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#0f3020'; ctx.lineWidth = 1; ctx.font = '9px ui-monospace,Consolas,monospace'; ctx.fillStyle = '#2f5a40';
+    const ringStep = CFG.lidar.rMax > 8 ? 2.5 : 1;
+    for (let r = ringStep; r <= CFG.lidar.rMax + 1e-6; r += ringStep) { ctx.beginPath(); ctx.arc(cx, cy, r * k, 0, TAU); ctx.stroke(); ctx.fillText(r + 'm', cx + 3, cy - r * k + 9); }
+    ctx.beginPath(); ctx.moveTo(cx - R, cy); ctx.lineTo(cx + R, cy); ctx.moveTo(cx, cy - R); ctx.lineTo(cx, cy + R); ctx.stroke();
+    const sw = (this.sim.t * CFG.lidar.hz * TAU) % TAU;           // görsel tarama çizgisi (robot çerçevesi, ileri = yukarı)
+    ctx.strokeStyle = 'rgba(57,255,122,0.5)'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx - R * Math.sin(sw), cy - R * Math.cos(sw)); ctx.stroke();
+    for (let i = 0; i < L.n; i++) {
+      if (L.flag[i] !== 1) continue;
+      const a = i * L.dA, r = L.ranges[i], near = r < 1.0;
+      ctx.fillStyle = near ? '#ff3355' : r < 2.5 ? '#ffb000' : '#39ff7a';
+      ctx.fillRect(cx - r * k * Math.sin(a) - 1, cy - r * k * Math.cos(a) - 1, near ? 2.5 : 2, near ? 2.5 : 2);
+    }
+    ctx.fillStyle = '#00e5ff'; ctx.beginPath(); ctx.moveTo(cx, cy - 7); ctx.lineTo(cx - 4, cy + 4); ctx.lineTo(cx + 4, cy + 4); ctx.fill();
+  }
+  drawSpark() {
+    const { ctx, w, h } = this.sc, H = this.sim.hist, top = 1.6;
+    ctx.fillStyle = '#000'; ctx.fillRect(0, 0, w, h);
+    ctx.strokeStyle = '#0f3020'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2); ctx.stroke();
+    ctx.fillStyle = '#2f5a40'; ctx.font = '9px ui-monospace,Consolas,monospace'; ctx.fillText('+' + top, 2, 9); ctx.fillText('−' + top, 2, h - 2);
+    const plot = (arr, col) => {
+      if (H.c < 2) return; ctx.strokeStyle = col; ctx.lineWidth = 1.4; ctx.beginPath();
+      for (let i = 0; i < H.c; i++) { const k = (H.h - H.c + i + 150) % 150, x = w - (H.c - 1 - i) * (w / 149), y = h / 2 - clamp(arr[k] / top, -1, 1) * (h / 2 - 3); i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); }
+      ctx.stroke();
+    };
+    plot(H.w, '#00e5ff'); plot(H.v, '#39ff7a');
+  }
+  drawFSM() {
+    const { ctx, w, h } = this.fc, nav = this.sim.nav, BW = 104, BH = 26, X0 = 4, Y0 = 22, DX = 110, DY = 50;
+    ctx.clearRect(0, 0, w, h);
+    const box = s => { const [c, r] = FSM_NODES[s]; return { x: X0 + c * DX, y: Y0 + r * DY, cx: X0 + c * DX + BW / 2, cy: Y0 + r * DY + BH / 2 }; };
+    const clip = (b, dx, dy) => { const t = Math.min(dx ? (BW / 2 + 2) / Math.abs(dx) : Infinity, dy ? (BH / 2 + 2) / Math.abs(dy) : Infinity); return [b.cx + dx * t, b.cy + dy * t]; };
+    const head = (x, y, ang, col) => { ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x - 6 * Math.cos(ang - 0.4), y - 6 * Math.sin(ang - 0.4)); ctx.lineTo(x - 6 * Math.cos(ang + 0.4), y - 6 * Math.sin(ang + 0.4)); ctx.fill(); };
+    const le = nav.lastEdge, set = new Set(FSM_EDGES.map(e => e[0] + '>' + e[1]));
+    for (const [a, b, arc] of FSM_EDGES) {
+      const A = box(a), B = box(b), hot = le && le[0] === a && le[1] === b, col = hot ? '#ffb000' : '#1f4a33';
+      ctx.strokeStyle = col; ctx.lineWidth = hot ? 2 : 1;
+      if (arc) {
+        const up = arc === 'arc' ? -1 : -1, sx = A.cx, sy = A.y - 1, ex = B.cx + (arc === 'arcB' ? -14 : 14), ey = B.y - 1, my = 4;
+        ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo((sx + ex) / 2, my * (up < 0 ? 1 : 1) - 10, ex, ey); ctx.stroke();
+        head(ex, ey, Math.atan2(ey - (my - 10), ex - (sx + ex) / 2), col); continue;
+      }
+      let dx = B.cx - A.cx, dy = B.cy - A.cy; const n = Math.hypot(dx, dy); dx /= n; dy /= n;
+      const off = set.has(b + '>' + a) ? 5 : 0, ox = -dy * off, oy = dx * off;
+      const [sx, sy] = clip(A, dx, dy), [ex, ey] = clip(B, -dx, -dy);
+      ctx.beginPath(); ctx.moveTo(sx + ox, sy + oy); ctx.lineTo(ex + ox, ey + oy); ctx.stroke(); head(ex + ox, ey + oy, Math.atan2(dy, dx), col);
+    }
+    ctx.font = '8.5px ui-monospace,Consolas,monospace'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const pulse = 0.55 + 0.45 * Math.sin(nowMs() / 200);
+    for (const s of Object.keys(FSM_NODES)) {
+      const B = box(s), act = s === nav.state;
+      const col = s === ST.AVOID ? '#ffb000' : s === ST.RECOV ? '#ff3355' : s === ST.GOAL ? '#00e5ff' : '#39ff7a';
+      ctx.fillStyle = act ? 'rgba(10,40,22,0.95)' : 'rgba(0,0,0,0.9)'; ctx.fillRect(B.x, B.y, BW, BH);
+      ctx.strokeStyle = act ? col : '#1a3b2a'; ctx.lineWidth = act ? 1.8 : 1;
+      if (act) { ctx.shadowColor = col; ctx.shadowBlur = 8 * pulse; }
+      ctx.strokeRect(B.x + 0.5, B.y + 0.5, BW - 1, BH - 1); ctx.shadowBlur = 0;
+      ctx.fillStyle = act ? col : '#4d6e59'; ctx.fillText(s, B.cx, B.cy + 0.5);
+    }
+    if (this.sim.robot.estop) { ctx.fillStyle = 'rgba(255,51,85,' + pulse + ')'; ctx.font = 'bold 11px ui-monospace,Consolas,monospace'; ctx.textAlign = 'right'; ctx.fillText('E-STOP', w - 6, Y0 + DY + BH / 2); }
+    ctx.textAlign = 'left';
+  }
+}
+
+/* ------------------------------- 13. OPERATÖR PANELİ BAĞLAMA ------------------------------ */
+const logger = new Logger();
+const sim = new Simulation(logger);
+const view = new Viewport(document.getElementById('view'), sim);
+view.resize();
+const hud = new HUD(sim, view);
+
+const SLIDERS = [
+  { label: 'Maks hız v_max', unit: 'm/s', min: 0.1, max: 1.5, step: 0.05, get: () => CFG.robot.vMax, set: v => { CFG.robot.vMax = v; } },
+  { label: 'Şişirme yarıçapı', unit: 'm', min: 0.4, max: 1.5, step: 0.05, get: () => CFG.costmap.inflR, set: v => { CFG.costmap.inflR = v; sim.costmap.rebuild(); } },
+  { label: 'Maliyet ölçek. ζ', unit: '1/m', min: 0.5, max: 10, step: 0.5, get: () => CFG.costmap.zeta, set: v => { CFG.costmap.zeta = v; sim.costmap.rebuild(); } },
+  { label: 'Enkoder gürültüsü σ', unit: 'm/√m', min: 0, max: 0.05, step: 0.001, get: () => CFG.robot.encNoise, set: v => { CFG.robot.encNoise = v; } },
+  { label: 'DWA ufku T', unit: 's', min: 0.5, max: 4, step: 0.1, get: () => CFG.dwa.horizon, set: v => { CFG.dwa.horizon = v; } },
+  { label: 'DWA α (yönelim)', unit: '', min: 0, max: 3, step: 0.05, get: () => CFG.dwa.alpha, set: v => { CFG.dwa.alpha = v; } },
+  { label: 'DWA β (açıklık)', unit: '', min: 0, max: 3, step: 0.05, get: () => CFG.dwa.beta, set: v => { CFG.dwa.beta = v; } },
+  { label: 'DWA γ (hız)', unit: '', min: 0, max: 3, step: 0.05, get: () => CFG.dwa.gamma, set: v => { CFG.dwa.gamma = v; } },
+  { label: 'DWA δ (ilerleme)', unit: '', min: 0, max: 3, step: 0.05, get: () => CFG.dwa.delta, set: v => { CFG.dwa.delta = v; } },
+  { label: 'LIDAR ışın sayısı', unit: '', min: 180, max: 720, step: 30, get: () => CFG.lidar.beams, set: v => { CFG.lidar.beams = v; sim.lidar.alloc(v); } },
+  { label: 'LIDAR menzili', unit: 'm', min: 3, max: 15, step: 0.5, get: () => CFG.lidar.rMax, set: v => { CFG.lidar.rMax = v; } },
+  { label: 'Veri kaybı olasılığı', unit: '', min: 0, max: 0.3, step: 0.01, get: () => CFG.lidar.dropout, set: v => { CFG.lidar.dropout = v; } },
+];
+(function buildSliders() {
+  const host = document.getElementById('sliders');
+  for (const s of SLIDERS) {
+    const d = document.createElement('div'); d.className = 'slider';
+    const dec = s.step < 0.01 ? 3 : s.step < 1 ? 2 : 0;
+    d.innerHTML = `<div class="top"><span>${s.label}</span><b></b></div><input type="range" min="${s.min}" max="${s.max}" step="${s.step}">`;
+    const inp = d.querySelector('input'), out = d.querySelector('b');
+    inp.value = s.get(); out.textContent = (+s.get()).toFixed(dec) + (s.unit ? ' ' + s.unit : '');
+    let pend = false;
+    inp.addEventListener('input', () => {
+      out.textContent = (+inp.value).toFixed(dec) + (s.unit ? ' ' + s.unit : '');
+      if (pend) return; pend = true;
+      requestAnimationFrame(() => { pend = false; s.set(+inp.value); });
+    });
+    inp.addEventListener('change', () => sim.log('INFO', `Parametre: ${s.label} = ${(+inp.value).toFixed(dec)}${s.unit ? ' ' + s.unit : ''}`));
+    host.appendChild(d);
+  }
+})();
+(function buildLayers() {
+  const host = document.getElementById('layers'), names = { rays: 'LIDAR ışınları', heat: 'Maliyet ısı katm.', path: 'Küresel yol', dwa: 'DWA yörüngeleri', trail: 'Robot izi', odom: 'Odometri hayaleti', grid: 'Metrik ızgara' };
+  for (const k of Object.keys(names)) {
+    const l = document.createElement('label'); l.className = 'chk';
+    l.innerHTML = `<input type="checkbox" checked> ${names[k]}`;
+    l.querySelector('input').addEventListener('change', e => { view.layers[k] = e.target.checked; });
+    host.appendChild(l);
+  }
+})();
+const toolNames = { goal: 'HEDEF', wall: 'STATİK DUVAR', agent: 'DİNAMİK HEDEF', erase: 'SİLGİ' };
+function setTool(t) {
+  view.tool = t; document.querySelectorAll('#tools button').forEach(b => b.classList.toggle('on', b.dataset.tool === t));
+  document.getElementById('hudTool').textContent = toolNames[t];
+}
+document.querySelectorAll('#tools button').forEach(b => b.addEventListener('click', () => setTool(b.dataset.tool)));
+const btnPause = document.getElementById('btnPause');
+function setPaused(p) { sim.paused = p; btnPause.textContent = p ? 'Devam' : 'Duraklat'; btnPause.classList.toggle('on', p); }
+function stepOnce() { if (!sim.paused) setPaused(true); for (let i = 0; i < Math.round(0.05 / CFG.phys.dt); i++) sim.step(CFG.phys.dt); }
+btnPause.addEventListener('click', () => { setPaused(!sim.paused); sim.log('INFO', sim.paused ? 'Simülasyon duraklatıldı' : 'Simülasyon devam ediyor'); });
+document.getElementById('btnStep').addEventListener('click', stepOnce);
+document.getElementById('btnReset').addEventListener('click', () => {
+  CFG.seed = parseInt(document.getElementById('inSeed').value, 10) || 1;
+  sim.reset(); view.cmRef = null; view.wRef = null;
+});
+document.getElementById('btnFit').addEventListener('click', () => view.fit());
+document.getElementById('btnClear').addEventListener('click', () => { sim.costmap.clearAll(); sim.log('INFO', 'Engel katmanı (log-odds) operatör tarafından temizlendi'); });
+document.getElementById('btnEstop').addEventListener('click', () => sim.toggleEstop());
+document.getElementById('selSpeed').addEventListener('change', e => { sim.speed = +e.target.value; sim.log('INFO', `Zaman ölçeği ×${sim.speed}`); });
+document.getElementById('selKin').addEventListener('change', e => sim.setKind(e.target.value));
+document.getElementById('selPlanner').addEventListener('change', e => { CFG.planner.mode = e.target.value; sim.log('INFO', `Küresel planlayıcı modu: ${e.target.value}`); });
+document.getElementById('selPose').addEventListener('change', e => {
+  CFG.poseSource = e.target.value;
+  sim.log(e.target.value === 'odom' ? 'WARN' : 'INFO', e.target.value === 'odom' ? 'Seyrüsefer ham odometri pozuna geçti — kayma haritaya ve plana yansıyacak' : 'Seyrüsefer yer gerçeği pozuna (ideal lokalizasyon) geçti');
+});
+window.addEventListener('keydown', e => {
+  if (e.target && /INPUT|SELECT|TEXTAREA/.test(e.target.tagName)) return;
+  if (e.code === 'Space') { e.preventDefault(); setPaused(!sim.paused); }
+  else if (e.key === '.') stepOnce();
+  else if (e.key === 'e' || e.key === 'E') sim.toggleEstop();
+  else if (e.key === 'f' || e.key === 'F') view.fit();
+  else if (e.key >= '1' && e.key <= '4') setTool(['goal', 'wall', 'agent', 'erase'][+e.key - 1]);
+});
+window.addEventListener('resize', () => { view.resize(); hud.resize(); });
+
+/* İmleç okuması (x, y, maliyet) */
+const curEl = document.getElementById('cursor');
+function updateCursor() {
+  if (!view.mouse.in) return;
+  const w = view.toWorld(view.mouse.x, view.mouse.y), c = sim.costmap.costAt(w.x, w.y);
+  const cls = c === 254 ? 'ÖLÜMCÜL' : c === 253 ? 'İÇSEL' : c > 0 ? `şişirme, açıklık ${(sim.costmap.clearanceOf(c) * 100).toFixed(0)} cm` : 'serbest';
+  curEl.textContent = `x ${w.x.toFixed(2)}  y ${w.y.toFixed(2)}  maliyet ${c} (${cls})`;
+}
+
+/* ------------------------------- 14. ANA DÖNGÜ -------------------------------------------- */
+let lastT = nowMs(), acc = 0, fpsT = 0, fpsN = 0, uiT = 0;
+function frame(t) {
+  const dtR = Math.min(0.1, Math.max(0, (t - lastT) / 1000)); lastT = t;
+  const f0 = nowMs(); let steps = 0;
+  if (!sim.paused) {
+    acc += dtR * sim.speed; const DT = CFG.phys.dt;
+    while (acc >= DT && steps < 240) { sim.step(DT); acc -= DT; steps++; }
+    if (steps >= 240) acc = 0;                       // spiral-of-death koruması
+  }
+  const f1 = nowMs();
+  view.render(); hud.drawRadar(); hud.drawFSM();
+  const f2 = nowMs(), M = sim.metrics;
+  M.steps = steps; M.step = ema(M.step, f1 - f0, 0.1); M.render = ema(M.render, f2 - f1, 0.1); M.frame = ema(M.frame, f2 - f0, 0.1);
+  fpsN++; fpsT += dtR; if (fpsT >= 0.5) { M.fps = fpsN / fpsT; fpsN = 0; fpsT = 0; }
+  uiT += dtR; if (uiT >= 0.1) { uiT = 0; hud.update(); updateCursor(); }
+  requestAnimationFrame(frame);
+}
+hud.update();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
